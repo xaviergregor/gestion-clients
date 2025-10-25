@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion de Clients - Connexion Sécurisée</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #282A36;
+            color: #F8F8F2;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-container {
+            background: #44475A;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            border: 2px solid #6272A4;
+            max-width: 400px;
+            width: 90%;
+            animation: slideUp 0.5s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-title {
+            color: #FF79C6;
+            font-size: 2em;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(255, 121, 198, 0.5);
+        }
+
+        .login-subtitle {
+            color: #8BE9FD;
+            font-size: 0.9em;
+        }
+
+        .security-badge {
+            display: inline-block;
+            background: #50FA7B;
+            color: #282A36;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #F1FA8C;
+            font-weight: 600;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #6272A4;
+            border-radius: 6px;
+            font-size: 14px;
+            background: #282A36;
+            color: #F8F8F2;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #BD93F9;
+            box-shadow: 0 0 10px rgba(189, 147, 249, 0.3);
+        }
+
+        .btn {
+            width: 100%;
+            background: #BD93F9;
+            color: #282A36;
+            border: none;
+            padding: 14px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Courier New', monospace;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            background: #FF79C6;
+            box-shadow: 0 0 20px rgba(189, 147, 249, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .error-message {
+            background: #FF5555;
+            color: white;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            text-align: center;
+            display: none;
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .remember-me input[type="checkbox"] {
+            width: auto;
+            cursor: pointer;
+        }
+
+        .remember-me label {
+            margin: 0;
+            font-weight: normal;
+            font-size: 0.9em;
+            cursor: pointer;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #6272A4;
+            font-size: 0.85em;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            color: #8BE9FD;
+            margin-top: 10px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #6272A4;
+            border-top-color: #BD93F9;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <div class="login-title">⚡ Gestion Clients</div>
+            <div class="login-subtitle">Connexion sécurisée</div>
+            <div class="security-badge">🔒 MOTS DE PASSE HASHÉS</div>
+        </div>
+
+        <div id="errorMessage" class="error-message"></div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">👤 Nom d'utilisateur</label>
+                <input type="text" id="username" required autocomplete="username" autofocus>
+            </div>
+
+            <div class="form-group">
+                <label for="password">🔒 Mot de passe</label>
+                <input type="password" id="password" required autocomplete="current-password">
+            </div>
+
+            <div class="remember-me">
+                <input type="checkbox" id="rememberMe" checked>
+                <label for="rememberMe">Se souvenir de moi (24h)</label>
+            </div>
+
+            <button type="submit" class="btn" id="loginBtn">Se connecter</button>
+        </form>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <div>Connexion en cours...</div>
+        </div>
+
+        <div class="footer">
+            🔐 Authentification backend sécurisée<br>
+            Mots de passe hashés avec bcrypt
+        </div>
+    </div>
+
+    <script>
+        const SESSION_KEY = 'gestion-clients-token';
+        const API_URL = '/auth';
+
+        // Vérifier si déjà connecté au chargement
+        checkSession();
+
+        // Gestion du formulaire de connexion
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await login();
+        });
+
+        async function login() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const rememberMe = document.getElementById('rememberMe').checked;
+            const errorDiv = document.getElementById('errorMessage');
+            const loginBtn = document.getElementById('loginBtn');
+            const loading = document.getElementById('loading');
+
+            // Réinitialiser l'état
+            errorDiv.classList.remove('show');
+            loginBtn.disabled = true;
+            loading.classList.add('show');
+
+            try {
+                // Appeler l'API de login
+                const response = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Stocker le token
+                    const tokenData = {
+                        token: data.token,
+                        username: data.username,
+                        expiresAt: data.expiresAt
+                    };
+
+                    if (rememberMe) {
+                        localStorage.setItem(SESSION_KEY, JSON.stringify(tokenData));
+                    } else {
+                        sessionStorage.setItem(SESSION_KEY, JSON.stringify(tokenData));
+                    }
+
+                    // Rediriger vers l'application
+                    window.location.href = 'app.html';
+                } else {
+                    // Erreur de connexion
+                    showError(data.error || 'Identifiants incorrects');
+                    loginBtn.disabled = false;
+                    loading.classList.remove('show');
+                    document.getElementById('password').value = '';
+                    document.getElementById('password').focus();
+                }
+
+            } catch (error) {
+                console.error('Erreur de connexion:', error);
+                showError('Erreur de connexion au serveur. Vérifiez que le serveur d\'authentification est démarré.');
+                loginBtn.disabled = false;
+                loading.classList.remove('show');
+            }
+        }
+
+        async function checkSession() {
+            // Vérifier si un token existe
+            let tokenData = localStorage.getItem(SESSION_KEY) || sessionStorage.getItem(SESSION_KEY);
+            
+            if (!tokenData) {
+                return; // Pas de session, rester sur la page de login
+            }
+
+            try {
+                const session = JSON.parse(tokenData);
+
+                // Vérifier si le token n'est pas expiré côté client
+                if (Date.now() >= session.expiresAt) {
+                    localStorage.removeItem(SESSION_KEY);
+                    sessionStorage.removeItem(SESSION_KEY);
+                    return;
+                }
+
+                // Vérifier le token côté serveur
+                const response = await fetch(`${API_URL}/verify`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${session.token}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Token valide, rediriger vers l'application
+                    window.location.href = 'app.html';
+                } else {
+                    // Token invalide, nettoyer
+                    localStorage.removeItem(SESSION_KEY);
+                    sessionStorage.removeItem(SESSION_KEY);
+                }
+
+            } catch (error) {
+                console.error('Erreur vérification session:', error);
+                // En cas d'erreur, nettoyer et rester sur le login
+                localStorage.removeItem(SESSION_KEY);
+                sessionStorage.removeItem(SESSION_KEY);
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = '❌ ' + message;
+            errorDiv.classList.add('show');
+        }
+    </script>
+</body>
+</html>
