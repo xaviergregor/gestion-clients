@@ -83,7 +83,7 @@ http://VOTRE_IP/gestion-clients/
 ---
 
 ## 🔐 IDENTIFIANTS (si auth activée)
-
+node create-user.js init
 ```
 admin / admin123
 ```
