@@ -6,1700 +6,684 @@
     <title>Gestion de Clients - Base de données</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-card: #1c2128;
+            --bg-hover: #21262d;
+            --bg-input: #0d1117;
+            --green-bright: #3fb950;
+            --green-default: #238636;
+            --green-dim: #196c2e;
+            --green-glow: rgba(63, 185, 80, 0.4);
+            --green-subtle: rgba(63, 185, 80, 0.15);
+            --yellow: #d29922;
+            --yellow-bright: #e3b341;
+            --red: #f85149;
+            --red-bright: #ff7b72;
+            --blue: #58a6ff;
+            --blue-bright: #79c0ff;
+            --purple: #a371f7;
+            --purple-bright: #d2a8ff;
+            --cyan: #56d4dd;
+            --cyan-bright: #76e4f7;
+            --orange: #db6d28;
+            --pink: #db61a2;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-muted: #6e7681;
+            --text-bright: #f0f6fc;
+            --border: #30363d;
+            --glow-green: 0 0 20px rgba(63, 185, 80, 0.4);
+            --glow-green-soft: 0 0 10px rgba(63, 185, 80, 0.2);
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
         }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Courier New', monospace;
-            background: #282A36;
-            color: #F8F8F2;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             min-height: 100vh;
             padding: 20px;
+            line-height: 1.6;
         }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+            pointer-events: none;
+            z-index: 9999;
         }
-
+        .container { max-width: 1400px; margin: 0 auto; }
         h1 {
-            color: #FF79C6;
+            color: var(--green-bright);
             text-align: center;
             margin-bottom: 30px;
-            font-size: 2.5em;
-            text-shadow: 0 0 10px rgba(255, 121, 198, 0.5);
+            font-size: 2.2em;
+            text-shadow: var(--glow-green);
         }
-
+        h1::before { content: '> '; color: var(--text-muted); }
         .card {
-            background: #44475A;
+            background: var(--bg-secondary);
             border-radius: 8px;
             padding: 25px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            box-shadow: var(--shadow);
             margin-bottom: 25px;
-            border: 1px solid #6272A4;
+            border: 1px solid var(--border);
+            transition: border-color 0.3s;
         }
-
+        .card:hover { border-color: var(--green-dim); }
         h2 {
-            color: #8BE9FD;
+            color: var(--cyan);
             margin-bottom: 20px;
-            font-size: 1.4em;
+            font-size: 1.3em;
         }
-
+        h2::before { content: '# '; color: var(--text-muted); }
         h3 {
-            color: #50FA7B;
+            color: var(--green-bright);
             margin-top: 20px;
             margin-bottom: 15px;
-            font-size: 1.2em;
+            font-size: 1.1em;
         }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
+        h3::before { content: '## '; color: var(--text-muted); }
+        .form-group { margin-bottom: 15px; }
         label {
             display: block;
             margin-bottom: 5px;
-            color: #F1FA8C;
+            color: var(--yellow-bright);
             font-weight: 600;
+            font-size: 0.9em;
         }
-
         input, textarea {
             width: 100%;
-            padding: 10px;
-            border: 2px solid #6272A4;
-            border-radius: 4px;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
             font-size: 14px;
-            transition: border-color 0.3s;
-            background: #282A36;
-            color: #F8F8F2;
-            font-family: 'Courier New', monospace;
+            transition: all 0.3s;
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-family: inherit;
         }
-
         input:focus, textarea:focus {
             outline: none;
-            border-color: #BD93F9;
+            border-color: var(--green-bright);
+            box-shadow: 0 0 0 3px var(--green-subtle);
         }
-
-        textarea {
-            resize: vertical;
-            min-height: 120px;
-            font-family: 'Courier New', monospace;
-            line-height: 1.5;
-        }
-
+        input::placeholder, textarea::placeholder { color: var(--text-muted); }
+        textarea { resize: vertical; min-height: 120px; }
         .btn {
-            background: #BD93F9;
-            color: #282A36;
+            background: var(--green-default);
+            color: var(--text-bright);
             border: none;
-            padding: 12px 25px;
-            border-radius: 4px;
-            font-size: 16px;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
             cursor: pointer;
             transition: all 0.3s;
-            font-weight: 700;
-            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
-
         .btn:hover {
-            background: #FF79C6;
-            box-shadow: 0 0 15px rgba(189, 147, 249, 0.6);
+            background: var(--green-bright);
+            box-shadow: var(--glow-green);
+            transform: translateY(-1px);
         }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .search-box {
-            margin-bottom: 20px;
-        }
-
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-danger { background: var(--red); }
+        .btn-danger:hover { background: var(--red-bright); box-shadow: 0 0 20px rgba(248,81,73,0.4); }
+        .btn-secondary { background: var(--bg-card); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--bg-hover); border-color: var(--green-bright); box-shadow: var(--glow-green-soft); }
+        .btn-purple { background: var(--purple); }
+        .btn-purple:hover { background: var(--purple-bright); box-shadow: 0 0 20px rgba(163,113,247,0.4); }
+        .btn-cyan { background: #0d7377; color: var(--cyan-bright); }
+        .btn-cyan:hover { background: var(--cyan); color: var(--bg-primary); }
+        .search-box { margin-bottom: 20px; }
         .search-box input {
-            background: #282A36;
+            padding-left: 40px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%236e7681' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: 12px center;
         }
-
-        .clients-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
+        .clients-list { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; }
         .client-button {
-            background: #44475A;
-            border: 2px solid #6272A4;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
             border-radius: 6px;
             padding: 15px 20px;
-            color: #FF79C6;
-            font-size: 1.1em;
-            font-weight: bold;
+            color: var(--green-bright);
+            font-size: 1em;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
             text-align: left;
-            font-family: 'Courier New', monospace;
+            font-family: inherit;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-
         .client-button:hover {
-            border-color: #BD93F9;
-            background: #282A36;
-            box-shadow: 0 0 15px rgba(189, 147, 249, 0.4);
-            transform: translateX(5px);
+            border-color: var(--green-bright);
+            background: var(--bg-hover);
+            box-shadow: var(--glow-green-soft);
+            transform: translateX(4px);
         }
-
-        .client-button.active {
-            border-color: #FF79C6;
-            background: #282A36;
-            box-shadow: 0 0 20px rgba(255, 121, 198, 0.5);
-        }
-
-        .client-arrow {
-            color: #8BE9FD;
-            font-size: 1.2em;
-        }
-
+        .client-button.active { border-color: var(--green-bright); background: var(--bg-hover); box-shadow: var(--glow-green); }
+        .client-button::before { content: '├── '; color: var(--text-muted); font-weight: normal; }
+        .client-arrow { color: var(--cyan); font-size: 1.1em; transition: transform 0.3s; }
+        .client-button:hover .client-arrow { transform: translateX(4px); }
         .client-details {
             display: none;
-            background: #282A36;
-            border: 2px solid #BD93F9;
-            border-radius: 6px;
+            background: var(--bg-card);
+            border: 1px solid var(--green-bright);
+            border-radius: 8px;
             padding: 25px;
             margin-top: 20px;
-            box-shadow: 0 0 25px rgba(189, 147, 249, 0.3);
+            box-shadow: var(--glow-green-soft);
         }
-
-        .client-details.show {
-            display: block;
-            animation: slideDown 0.3s ease;
-        }
-
+        .client-details.show { display: block; animation: slideDown 0.3s ease; }
         @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-
         .detail-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
             padding-bottom: 15px;
-            border-bottom: 2px solid #6272A4;
+            border-bottom: 1px solid var(--border);
         }
-
         .detail-title {
-            font-size: 1.6em;
+            font-size: 1.5em;
             font-weight: bold;
-            color: #FF79C6;
-            text-shadow: 0 0 5px rgba(255, 121, 198, 0.3);
+            color: var(--green-bright);
+            text-shadow: var(--glow-green-soft);
         }
-
-        .detail-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .client-info {
-            color: #F8F8F2;
-            margin-bottom: 15px;
-            line-height: 1.8;
-            font-size: 1em;
-        }
-
-        .client-info strong {
-            color: #8BE9FD;
-            display: inline-block;
-            min-width: 120px;
-        }
-
+        .detail-title::before { content: '> '; color: var(--text-muted); }
+        .detail-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .client-info { color: var(--text-primary); margin-bottom: 12px; line-height: 1.8; font-size: 0.95em; }
+        .client-info strong { color: var(--cyan); display: inline-block; min-width: 120px; }
         .client-notes {
-            background: #44475A;
+            background: var(--bg-secondary);
             padding: 15px;
             border-radius: 6px;
             margin-top: 15px;
-            border-left: 4px solid #50FA7B;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            font-family: 'Courier New', monospace;
-            font-size: 0.95em;
-            line-height: 1.8;
-            color: #F1FA8C;
+            border-left: 3px solid var(--green-bright);
         }
-
-        .notes-label {
-            color: #8BE9FD;
-            font-weight: bold;
-            margin-bottom: 10px;
-            display: block;
-        }
-
-        .btn-small {
-            padding: 8px 15px;
-            font-size: 13px;
-        }
-
-        .btn-delete {
-            background: #FF5555;
-            color: #F8F8F2;
-        }
-
-        .btn-delete:hover {
-            background: #FF6E67;
-            box-shadow: 0 0 15px rgba(255, 85, 85, 0.6);
-        }
-
-        .btn-edit {
-            background: #8BE9FD;
-            color: #282A36;
-        }
-
-        .btn-edit:hover {
-            background: #50FA7B;
-            box-shadow: 0 0 15px rgba(139, 233, 253, 0.6);
-        }
-
-        .empty-state {
+        .notes-label { color: var(--yellow-bright); font-weight: 600; margin-bottom: 10px; font-size: 0.9em; }
+        .notes-content { white-space: pre-wrap; font-family: inherit; color: var(--text-secondary); line-height: 1.7; }
+        .files-section { margin-top: 25px; padding-top: 20px; border-top: 1px solid var(--border); }
+        .files-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .files-title { color: var(--purple); font-size: 1.1em; }
+        .files-title::before { content: '📁 '; }
+        .file-upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 30px;
             text-align: center;
-            padding: 60px 20px;
-            color: #6272A4;
-            grid-column: 1 / -1;
-        }
-
-        .empty-state svg {
-            width: 100px;
-            height: 100px;
             margin-bottom: 20px;
-            opacity: 0.5;
+            transition: all 0.3s;
+            cursor: pointer;
         }
-
-        .stats {
+        .file-upload-zone:hover, .file-upload-zone.dragover {
+            border-color: var(--green-bright);
+            background: var(--green-subtle);
+        }
+        .file-upload-zone.dragover { box-shadow: var(--glow-green); }
+        .upload-icon { font-size: 2.5em; margin-bottom: 10px; }
+        .upload-text { color: var(--text-secondary); margin-bottom: 10px; }
+        .upload-hint { color: var(--text-muted); font-size: 0.85em; }
+        .files-list { display: flex; flex-direction: column; gap: 8px; }
+        .file-item {
             display: flex;
-            justify-content: space-around;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .stat-box {
-            background: #282A36;
-            color: #F8F8F2;
-            padding: 20px;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 15px;
+            background: var(--bg-secondary);
             border-radius: 6px;
-            text-align: center;
-            flex: 1;
-            min-width: 150px;
-            border: 2px solid #BD93F9;
+            border: 1px solid var(--border);
+            transition: all 0.3s;
         }
-
-        .stat-number {
-            font-size: 2.5em;
-            font-weight: bold;
-            color: #FF79C6;
-        }
-
-        .stat-label {
-            font-size: 0.9em;
-            color: #8BE9FD;
-            margin-top: 5px;
-        }
-
-        .note-hint {
-            font-size: 0.85em;
-            color: #6272A4;
-            margin-top: 5px;
-            font-style: italic;
-        }
-
+        .file-item:hover { border-color: var(--cyan); }
+        .file-info { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+        .file-icon { font-size: 1.3em; }
+        .file-name { color: var(--text-primary); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-size { color: var(--text-muted); font-size: 0.85em; margin-left: 10px; }
+        .file-actions { display: flex; gap: 8px; }
+        .file-btn { padding: 6px 12px; font-size: 0.85em; border-radius: 4px; }
+        .no-files { text-align: center; padding: 30px; color: var(--text-muted); }
+        .no-files::before { content: '📭 '; font-size: 1.5em; }
+        .edit-form { background: var(--bg-secondary); padding: 20px; border-radius: 8px; border: 1px solid var(--border); }
+        .edit-form .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
+        .edit-form .form-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
         .status-message {
-            background: #50FA7B;
-            color: #282A36;
-            padding: 10px 15px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            font-weight: bold;
-            text-align: center;
-        }
-
-        .status-message.error {
-            background: #FF5555;
-            color: #F8F8F2;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #8BE9FD;
-        }
-
-        .alphabet-filters {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 20px;
-            justify-content: center;
-        }
-
-        .alphabet-btn {
-            background: #44475A;
-            border: 2px solid #6272A4;
-            color: #8BE9FD;
-            padding: 8px 14px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            font-family: 'Courier New', monospace;
-            transition: all 0.3s;
-            font-size: 0.95em;
-        }
-
-        .alphabet-btn:hover {
-            border-color: #BD93F9;
-            background: #282A36;
-            transform: translateY(-2px);
-        }
-
-        .alphabet-btn.active {
-            background: #BD93F9;
-            color: #282A36;
-            border-color: #BD93F9;
-        }
-
-        .alphabet-btn.all {
-            background: #FF79C6;
-            color: #282A36;
-            border-color: #FF79C6;
-            padding: 8px 20px;
-        }
-
-        .alphabet-btn.all:hover {
-            background: #FF5555;
-            border-color: #FF5555;
-        }
-
-        .list-info {
-            text-align: center;
-            padding: 40px 20px;
-            color: #8BE9FD;
-            font-style: italic;
-        }
-
-        /* Styles pour les fichiers */
-        .files-section {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 2px solid #6272A4;
-        }
-
-        .upload-area {
-            background: #44475A;
-            border: 2px dashed #6272A4;
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
-            margin-bottom: 20px;
-            transition: all 0.3s;
-        }
-
-        .upload-area:hover {
-            border-color: #BD93F9;
-            background: #282A36;
-        }
-
-        .upload-area.dragover {
-            border-color: #50FA7B;
-            background: #282A36;
-        }
-
-        .upload-input {
-            display: none;
-        }
-
-        .upload-label {
-            cursor: pointer;
-            color: #8BE9FD;
-            font-size: 1.1em;
-        }
-
-        .upload-hint {
-            color: #6272A4;
-            font-size: 0.9em;
-            margin-top: 10px;
-        }
-
-        .files-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
-        }
-
-        .file-card {
-            background: #44475A;
-            border: 2px solid #6272A4;
-            border-radius: 8px;
-            padding: 15px;
-            transition: all 0.3s;
-            position: relative;
-        }
-
-        .file-card:hover {
-            border-color: #BD93F9;
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(189, 147, 249, 0.3);
-        }
-
-        .file-preview {
-            width: 100%;
-            height: 150px;
-            background: #282A36;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 10px;
-            overflow: hidden;
-        }
-
-        .file-preview img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-        }
-
-        .file-icon {
-            font-size: 3em;
-            color: #8BE9FD;
-        }
-
-        .file-name {
-            color: #F8F8F2;
-            font-size: 0.9em;
-            word-break: break-word;
-            margin-bottom: 5px;
-        }
-
-        .file-size {
-            color: #6272A4;
-            font-size: 0.8em;
-            margin-bottom: 10px;
-        }
-
-        .file-actions {
-            display: flex;
-            gap: 5px;
-        }
-
-        .btn-icon {
-            padding: 6px 10px;
-            font-size: 12px;
-            flex: 1;
-        }
-
-        .upload-progress {
-            background: #44475A;
-            border-radius: 4px;
-            padding: 10px;
-            margin-top: 10px;
-            display: none;
-        }
-
-        .progress-bar {
-            width: 100%;
-            height: 20px;
-            background: #282A36;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #50FA7B, #8BE9FD);
-            transition: width 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #282A36;
-            font-weight: bold;
-            font-size: 0.8em;
-        }
-
-        /* Modal de visualisation */
-        .modal {
-            display: none;
             position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-weight: 600;
             z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.95);
-            animation: fadeIn 0.3s ease;
+            animation: slideIn 0.3s ease;
+            max-width: 400px;
         }
-
-        .modal.show {
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(50px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .status-success { background: var(--green-dim); color: var(--green-bright); border: 1px solid var(--green-default); }
+        .status-error { background: rgba(248,81,73,0.2); color: var(--red-bright); border: 1px solid var(--red); }
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
             display: flex;
             align-items: center;
             justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
         }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+        .modal-overlay.show { opacity: 1; visibility: visible; }
+        .modal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            transform: scale(0.9);
+            transition: transform 0.3s;
         }
-
-        .modal-content {
-            position: relative;
-            max-width: 95%;
-            max-height: 95%;
-            width: 1400px;
-            background: #282A36;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 0 50px rgba(189, 147, 249, 0.5);
-        }
-
-        .modal-header {
-            background: #44475A;
-            padding: 20px 25px;
+        .modal-overlay.show .modal { transform: scale(1); }
+        .modal-title { color: var(--yellow-bright); font-size: 1.3em; margin-bottom: 15px; }
+        .modal-content { color: var(--text-secondary); margin-bottom: 25px; line-height: 1.6; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+        .export-section { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); }
+        .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 2px solid #6272A4;
-        }
-
-        .modal-title {
-            color: #FF79C6;
-            font-size: 1.4em;
-            font-weight: bold;
-        }
-
-        .modal-close {
-            background: #FF5555;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1.3em;
-            font-weight: bold;
-            transition: all 0.3s;
-        }
-
-        .modal-close:hover {
-            background: #FF6E67;
-            transform: scale(1.1);
-        }
-
-        .modal-body {
-            padding: 0;
-            max-height: calc(95vh - 80px);
-            overflow: auto;
-            background: #1a1c24;
-        }
-
-        .modal-image {
-            width: 100%;
-            height: auto;
-            min-height: 500px;
-            max-height: calc(95vh - 80px);
-            object-fit: contain;
-            background: #1a1c24;
-        }
-
-        .modal-document {
-            width: 100%;
-            height: calc(95vh - 80px);
-            min-height: 600px;
-            border: none;
-            background: white;
-        }
-
-        .modal-text {
-            background: #44475A;
-            color: #F8F8F2;
-            padding: 30px;
-            font-family: 'Courier New', monospace;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            min-height: 500px;
-            max-height: calc(95vh - 80px);
-            overflow: auto;
-            font-size: 1.1em;
-            line-height: 1.6;
-        }
-
-        .modal-unsupported {
-            text-align: center;
-            padding: 60px 40px;
-            color: #8BE9FD;
-        }
-
-        .modal-unsupported-icon {
-            font-size: 5em;
             margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
         }
-
-        .modal-video-container {
-            padding: 20px;
-            background: #1a1c24;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 500px;
-        }
-
-        .modal-video {
-            max-width: 100%;
-            max-height: calc(95vh - 120px);
-            width: auto;
-            height: auto;
-        }
-
-        .modal-audio-container {
-            padding: 60px 40px;
-            text-align: center;
-            background: #44475A;
-            min-height: 300px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .export-menu {
-            background: #44475A;
-            border: 2px solid #50FA7B;
+        .header-title { color: var(--green-bright); font-size: 1.8em; text-shadow: var(--glow-green); }
+        .header-title::before { content: '> '; color: var(--text-muted); }
+        .header-actions { display: flex; gap: 15px; align-items: center; }
+        .user-info { color: var(--text-secondary); font-size: 0.9em; }
+        .user-info span { color: var(--cyan); font-weight: 600; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
             border-radius: 8px;
             padding: 20px;
-            margin-top: 10px;
-            display: none;
-        }
-
-        .export-menu.show {
-            display: block;
-            animation: slideDown 0.3s ease;
-        }
-
-        .export-options {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
-        }
-
-        .export-btn {
-            background: #282A36;
-            border: 2px solid #8BE9FD;
-            color: #8BE9FD;
-            padding: 15px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-family: 'Courier New', monospace;
-            font-size: 1em;
-            font-weight: bold;
             text-align: center;
+            transition: all 0.3s;
         }
-
-        .export-btn:hover {
-            background: #8BE9FD;
-            color: #282A36;
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(139, 233, 253, 0.4);
-        }
-
-        .export-btn-icon {
-            font-size: 2em;
-            display: block;
-            margin-bottom: 10px;
-        }
-
+        .stat-card:hover { border-color: var(--green-bright); box-shadow: var(--glow-green-soft); }
+        .stat-value { font-size: 2em; font-weight: bold; color: var(--green-bright); text-shadow: var(--glow-green-soft); }
+        .stat-label { color: var(--text-muted); font-size: 0.85em; margin-top: 5px; }
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+        .empty-state-icon { font-size: 4em; margin-bottom: 20px; opacity: 0.5; }
+        .empty-state-text { font-size: 1.1em; margin-bottom: 10px; }
         @media (max-width: 768px) {
-            .clients-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            h1 {
-                font-size: 2em;
-            }
-
-            .files-grid {
-                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            }
-
-            .modal-content {
-                max-width: 98%;
-                max-height: 98%;
-                width: auto;
-            }
-
-            .modal-body {
-                max-height: calc(98vh - 70px);
-            }
-
-            .modal-image,
-            .modal-document,
-            .modal-video {
-                max-height: calc(98vh - 70px);
-            }
-
-            .modal-text {
-                padding: 15px;
-                font-size: 0.9em;
-            }
+            body { padding: 10px; }
+            h1 { font-size: 1.5em; }
+            .header { flex-direction: column; gap: 15px; text-align: center; }
+            .detail-header { flex-direction: column; gap: 15px; }
+            .detail-actions { width: 100%; justify-content: center; }
+            .btn { padding: 10px 16px; font-size: 13px; }
         }
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--green-dim); }
+        ::selection { background: var(--green-subtle); color: var(--text-bright); }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>⚡ Gestion de Clients - Base de données</h1>
-
-        <div id="statusMessage"></div>
-
+        <h1>Gestion de Clients</h1>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="totalClients">0</div>
+                <div class="stat-label">Clients</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalFiles">0</div>
+                <div class="stat-label">Fichiers</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="lastUpdate">-</div>
+                <div class="stat-label">Dernière mise à jour</div>
+            </div>
+        </div>
         <div class="card">
-            <h2>➕ Ajouter un nouveau client</h2>
+            <h2>Ajouter un client</h2>
             <form id="clientForm">
-                <div class="form-group">
-                    <label for="nom">Nom complet *</label>
-                    <input type="text" id="nom" required placeholder="Jean Dupont">
+                <div class="edit-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="nom">👤 Nom *</label>
+                            <input type="text" id="nom" required placeholder="Nom du client">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">📧 Email</label>
+                            <input type="email" id="email" placeholder="email@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="telephone">📱 Téléphone</label>
+                            <input type="tel" id="telephone" placeholder="06 12 34 56 78">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="notes">📝 Notes</label>
+                        <textarea id="notes" placeholder="Informations supplémentaires..."></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="resetForm()">↩️ Réinitialiser</button>
+                        <button type="submit" class="btn">➕ Ajouter le client</button>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="email">Email</label>
-                    <input type="email" id="email" placeholder="jean.dupont@email.com">
-                </div>
-                <div class="form-group">
-                    <label for="telephone">Téléphone</label>
-                    <input type="tel" id="telephone" placeholder="06 12 34 56 78">
-                </div>
-                <div class="form-group">
-                    <label for="notes">Notes / Informations</label>
-                    <textarea id="notes" placeholder="Mot de passe: ******&#10;Serveur: 192.168.1.10&#10;IP: 10.0.0.5&#10;Accès: admin&#10;Notes: Client VIP depuis 2023"></textarea>
-                    <div class="note-hint">💡 Vous pouvez enregistrer : mots de passe, adresses IP, serveurs, accès, etc.</div>
-                </div>
-                <button type="submit" class="btn" id="submitBtn">Ajouter le client</button>
             </form>
         </div>
-
         <div class="card">
-            <div class="stats" id="stats">
-                <div class="stat-box">
-                    <div class="stat-number" id="totalClients">0</div>
-                    <div class="stat-label">Clients enregistrés</div>
-                </div>
-            </div>
-
-            <h2>👥 Liste des clients</h2>
-            
-            <div class="alphabet-filters" id="alphabetFilters">
-                <!-- Les filtres seront générés par JavaScript -->
-            </div>
-            
+            <h2>Liste des clients</h2>
             <div class="search-box">
-                <input type="text" id="searchInput" placeholder="🔍 Rechercher un client...">
+                <input type="text" id="searchInput" placeholder="Rechercher un client..." onkeyup="filterClients()">
             </div>
-            <div class="clients-list" id="clientsList">
-                <div class="list-info">
-                    💡 Cliquez sur une lettre ci-dessus ou utilisez la recherche pour afficher vos clients
-                </div>
-            </div>
-            <div class="client-details" id="clientDetails"></div>
+            <div id="clientsList" class="clients-list"></div>
         </div>
-
-        <!--<div class="card">
-            <h2>💾 Export de la base de données</h2>
-            <div style="text-align: center; margin-bottom: 20px;">
-                <button class="btn" onclick="showExportMenu()" style="background: #50FA7B; color: #282A36; font-size: 1.1em; padding: 15px 30px;">
-                    💾 Exporter toute la base de données
-                </button>
-            </div>
-
-            <div class="export-menu" id="exportMenu">
-                <h3 style="color: #50FA7B; margin-bottom: 15px; text-align: center;">Choisissez le format d'export</h3>
-                <div class="export-options">
-                    <button class="export-btn" onclick="exportData('json')">
-                        <span class="export-btn-icon">📋</span>
-                        JSON<br><small style="opacity: 0.7;">Format brut</small>
-                    </button>
-                    <button class="export-btn" onclick="exportData('csv')">
-                        <span class="export-btn-icon">📊</span>
-                        CSV<br><small style="opacity: 0.7;">Excel compatible</small>
-                    </button>
-                    <button class="export-btn" onclick="exportData('txt')">
-                        <span class="export-btn-icon">📄</span>
-                        TXT<br><small style="opacity: 0.7;">Texte formaté</small>
-                    </button>
-                    <button class="export-btn" onclick="exportData('html')">
-                        <span class="export-btn-icon">🌐</span>
-                        HTML<br><small style="opacity: 0.7;">Page web</small>
-                    </button>
-                    <button class="export-btn" onclick="exportDataWithFiles()" style="border-color: #FF79C6; grid-column: span 2;">
-                        <span class="export-btn-icon">📦</span>
-                        Export complet (ZIP)<br><small style="opacity: 0.7;">Données + Fichiers</small>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>-->
-
-    <!-- Modal de visualisation -->
-    <div id="viewModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-title" id="modalTitle">Visualisation</div>
-                <button class="modal-close" onclick="closeModal()">✕ Fermer</button>
-            </div>
-            <div class="modal-body" id="modalBody">
-                <!-- Le contenu sera injecté ici -->
+        <div id="clientDetails" class="client-details"></div>
+        <div class="card">
+            <h2>Import / Export</h2>
+            <div class="export-section">
+                <button class="btn btn-secondary" onclick="exportData('json')">📄 Export JSON</button>
+                <button class="btn btn-secondary" onclick="exportData('csv')">📊 Export CSV</button>
+                <button class="btn btn-secondary" onclick="exportData('txt')">📝 Export TXT</button>
+                <button class="btn btn-secondary" onclick="exportData('html')">🌐 Export HTML</button>
+                <button class="btn btn-purple" onclick="exportDataWithFiles()">📦 Export complet (ZIP)</button>
+                <label class="btn btn-cyan" style="cursor: pointer;">
+                    📥 Import JSON
+                    <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importData(event)">
+                </label>
             </div>
         </div>
     </div>
-
+    <div id="confirmModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-title">⚠️ Confirmation</div>
+            <div class="modal-content" id="confirmMessage">Êtes-vous sûr ?</div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeConfirmModal()">Annuler</button>
+                <button class="btn btn-danger" id="confirmBtn" onclick="confirmAction()">Confirmer</button>
+            </div>
+        </div>
+    </div>
+    <div id="statusMessage" class="status-message" style="display: none;"></div>
     <script>
         const API_URL = '/api/clients';
-        const UPLOAD_API_URL = '/upload';
         const FILES_API_URL = '/files';
-        let editingId = null;
+        let clients = [];
         let selectedClientId = null;
-        let allClients = [];
-        let currentFilter = null;
-        let currentDisplayedClients = [];
+        let pendingAction = null;
 
-        // Afficher un message de statut
-        function showStatus(message, isError = false) {
-            const statusDiv = document.getElementById('statusMessage');
-            statusDiv.innerHTML = `<div class="status-message ${isError ? 'error' : ''}">${message}</div>`;
-            setTimeout(() => {
-                statusDiv.innerHTML = '';
-            }, 3000);
-        }
+        loadClients();
 
-        // Générer les boutons alphabétiques
-        function generateAlphabetFilters() {
-            const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-            const filtersDiv = document.getElementById('alphabetFilters');
-            
-            let html = '<button class="alphabet-btn all" onclick="window.filterByLetter(\'all\')">TOUS</button>';
-            
-            alphabet.forEach(letter => {
-                html += `<button class="alphabet-btn" onclick="window.filterByLetter('${letter}')">${letter}</button>`;
-            });
-            
-            filtersDiv.innerHTML = html;
-        }
-
-        // Filtrer par lettre
-        window.filterByLetter = function(letter) {
-            currentFilter = letter;
-            
-            document.querySelectorAll('.alphabet-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            
-            document.getElementById('searchInput').value = '';
-            
-            let filtered;
-            if (letter === 'all') {
-                filtered = allClients;
-            } else {
-                filtered = allClients.filter(client => 
-                    client.nom.toUpperCase().startsWith(letter)
-                );
-            }
-            
-            displayClientsList(filtered);
-        }
-
-        // Charger tous les clients
         async function loadClients() {
             try {
                 const response = await fetch(API_URL);
-                if (!response.ok) throw new Error('Erreur de chargement');
-                allClients = await response.json();
-                
-                allClients.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
-                
-                generateAlphabetFilters();
-                
-                document.getElementById('totalClients').textContent = allClients.length;
-                
-                document.getElementById('clientsList').innerHTML = `
-                    <div class="list-info">
-                        💡 Cliquez sur une lettre ci-dessus ou utilisez la recherche pour afficher vos clients
-                    </div>
-                `;
-            } catch (error) {
-                showStatus('❌ Erreur: Impossible de charger les clients. Vérifiez que le serveur est démarré.', true);
-                document.getElementById('clientsList').innerHTML = `
-                    <div class="empty-state">
-                        <p style="color: #FF5555;">⚠️ Erreur de connexion à la base de données</p>
-                        <p>Assurez-vous que le serveur JSON est démarré avec: npm start</p>
-                    </div>
-                `;
-            }
+                clients = await response.json();
+                updateStats();
+                renderClients();
+            } catch (error) { console.error('Erreur:', error); showStatus('❌ Erreur de chargement', true); }
         }
 
-        // Ajouter ou modifier un client
-        document.getElementById('clientForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const submitBtn = document.getElementById('submitBtn');
-            submitBtn.disabled = true;
+        function updateStats() {
+            document.getElementById('totalClients').textContent = clients.length;
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('fr-FR');
+            let totalFiles = 0;
+            clients.forEach(c => { if (c.filesCount) totalFiles += c.filesCount; });
+            document.getElementById('totalFiles').textContent = totalFiles || '—';
+        }
 
-            const client = {
-                nom: document.getElementById('nom').value,
-                email: document.getElementById('email').value,
-                telephone: document.getElementById('telephone').value,
-                notes: document.getElementById('notes').value,
-                dateAjout: editingId ? undefined : new Date().toLocaleDateString('fr-FR')
-            };
-
-            try {
-                let response;
-                if (editingId) {
-                    response = await fetch(`${API_URL}/${editingId}`, {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({...client, id: editingId, dateAjout: allClients.find(c => c.id === editingId)?.dateAjout})
-                    });
-                    showStatus('✅ Client modifié avec succès !');
-                } else {
-                    response = await fetch(API_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(client)
-                    });
-                    showStatus('✅ Client ajouté avec succès !');
-                }
-
-                if (!response.ok) throw new Error('Erreur de sauvegarde');
-
-                editingId = null;
-                document.getElementById('submitBtn').textContent = 'Ajouter le client';
-                this.reset();
-                
-                document.getElementById('clientDetails').classList.remove('show');
-                selectedClientId = null;
-                
-                await loadClients();
-                
-                document.getElementById('clientsList').scrollIntoView({ behavior: 'smooth' });
-            } catch (error) {
-                showStatus('❌ Erreur lors de la sauvegarde du client', true);
-            } finally {
-                submitBtn.disabled = false;
-            }
-        });
-
-        // Afficher la liste des clients (boutons)
-        function displayClientsList(clients, title = null) {
-            const clientsList = document.getElementById('clientsList');
-
-            currentDisplayedClients = clients;
-
-            document.getElementById('totalClients').textContent = allClients.length;
-
-            if (clients.length === 0) {
-                clientsList.innerHTML = `
-                    <div class="empty-state">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
-                        <p>Aucun client trouvé ${title ? 'pour cette recherche' : ''}.</p>
-                    </div>
-                `;
+        function renderClients() {
+            const container = document.getElementById('clientsList');
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = clients.filter(c =>
+                c.nom.toLowerCase().includes(searchTerm) ||
+                (c.email && c.email.toLowerCase().includes(searchTerm)) ||
+                (c.telephone && c.telephone.includes(searchTerm))
+            );
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔍</div><div class="empty-state-text">Aucun client trouvé</div></div>';
                 return;
             }
-
-            let html = '';
-            
-            if (title) {
-                html += `<div style="color: #8BE9FD; margin-bottom: 15px; font-weight: bold; text-align: center;">${title} (${clients.length} résultat${clients.length > 1 ? 's' : ''})</div>`;
-            }
-
-            html += clients.map(client => `
-                <button class="client-button ${selectedClientId === client.id ? 'active' : ''}" onclick="window.showClientDetails('${client.id}')">
-                    <span>${escapeHtml(client.nom)}</span>
-                    <span class="client-arrow">▶</span>
+            container.innerHTML = filtered.map(client => `
+                <button class="client-button ${selectedClientId === client.id ? 'active' : ''}" onclick="selectClient('${client.id}')">
+                    <span>${client.nom}</span>
+                    <span class="client-arrow">→</span>
                 </button>
             `).join('');
-            
-            clientsList.innerHTML = html;
         }
 
-        // Afficher les détails d'un client
-        window.showClientDetails = async function(id) {
-            console.log('showClientDetails appelé avec id:', id);
-            try {
-                const url = `${API_URL}/${id}`;
-                console.log('Fetching:', url);
-                
-                const response = await fetch(url);
-                console.log('Response status:', response.status);
-                
-                if (!response.ok) throw new Error('Erreur de chargement');
-                
-                const client = await response.json();
-                console.log('Client chargé:', client);
-                
-                selectedClientId = id;
-                
-                if (currentDisplayedClients.length > 0) {
-                    displayClientsList(currentDisplayedClients);
-                }
-                
-                const detailsDiv = document.getElementById('clientDetails');
-                console.log('Details div trouvé:', detailsDiv);
-                
-                detailsDiv.innerHTML = `
-                    <div class="detail-header">
-                        <div class="detail-title">${escapeHtml(client.nom)}</div>
-                        <div class="detail-actions">
-                            <button class="btn btn-small" onclick="window.exportSingleClient('${client.id}')" style="background: #50FA7B; color: #282A36;">💾 Exporter</button>
-                            <button class="btn btn-small btn-edit" onclick="window.editClient('${client.id}')">✏️ Modifier</button>
-                            <button class="btn btn-small btn-delete" onclick="window.deleteClient('${client.id}')">🗑️ Supprimer</button>
-                        </div>
+        function filterClients() { renderClients(); }
+
+        async function selectClient(clientId) {
+            selectedClientId = clientId;
+            renderClients();
+            const client = clients.find(c => c.id === clientId);
+            if (!client) return;
+            const details = document.getElementById('clientDetails');
+            details.innerHTML = `
+                <div class="detail-header">
+                    <div class="detail-title">${client.nom}</div>
+                    <div class="detail-actions">
+                        <button class="btn btn-secondary" onclick="editClient('${client.id}')">✏️ Modifier</button>
+                        <button class="btn btn-purple" onclick="exportSingleClient('${client.id}')">📦 Exporter</button>
+                        <button class="btn btn-danger" onclick="confirmDelete('${client.id}')">🗑️ Supprimer</button>
                     </div>
-                    ${client.email ? `<div class="client-info"><strong>📧 Email:</strong> ${escapeHtml(client.email)}</div>` : ''}
-                    ${client.telephone ? `<div class="client-info"><strong>📱 Téléphone:</strong> ${escapeHtml(client.telephone)}</div>` : ''}
-                    <div class="client-info"><strong>📅 Ajouté le:</strong> ${client.dateAjout || 'N/A'}</div>
-                    ${client.notes ? `
-                        <div style="margin-top: 20px;">
-                            <span class="notes-label">📝 Notes / Informations:</span>
-                            <div class="client-notes">${escapeHtml(client.notes)}</div>
-                        </div>
-                    ` : ''}
-                    
-                    <div class="files-section">
-                        <h3>📁 Fichiers et Documents</h3>
-                        
-                        <div class="upload-area" id="uploadArea-${client.id}">
-                            <input type="file" id="fileInput-${client.id}" class="upload-input" multiple onchange="window.handleFileSelect('${client.id}', event)">
-                            <label for="fileInput-${client.id}" class="upload-label">
-                                📤 Cliquez pour uploader des fichiers ou glissez-déposez ici
-                            </label>
-                            <div class="upload-hint">Tous types de fichiers acceptés (Max 50MB par fichier)</div>
-                            <div class="upload-progress" id="uploadProgress-${client.id}">
-                                <div class="progress-bar">
-                                    <div class="progress-fill" id="progressFill-${client.id}" style="width: 0%">0%</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="files-grid" id="filesGrid-${client.id}">
-                            <div class="loading">Chargement des fichiers...</div>
-                        </div>
+                </div>
+                <div class="client-info"><strong>📧 Email :</strong> ${client.email || '—'}</div>
+                <div class="client-info"><strong>📱 Téléphone :</strong> ${client.telephone || '—'}</div>
+                <div class="client-info"><strong>📅 Ajouté le :</strong> ${client.dateAjout || '—'}</div>
+                <div class="client-info"><strong>🆔 ID :</strong> <code>${client.id}</code></div>
+                ${client.notes ? `<div class="client-notes"><div class="notes-label">📝 Notes</div><div class="notes-content">${escapeHtml(client.notes)}</div></div>` : ''}
+                <div class="files-section">
+                    <div class="files-header"><div class="files-title">Fichiers attachés</div></div>
+                    <div class="file-upload-zone" id="uploadZone" ondrop="handleDrop(event, '${client.id}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" onclick="document.getElementById('fileInput').click()">
+                        <div class="upload-icon">📁</div>
+                        <div class="upload-text">Glissez-déposez des fichiers ici</div>
+                        <div class="upload-hint">ou cliquez pour parcourir</div>
+                        <input type="file" id="fileInput" multiple style="display: none;" onchange="uploadFiles(event, '${client.id}')">
                     </div>
-                `;
-                
-                detailsDiv.classList.add('show');
-                console.log('Détails affichés');
-                
-                // Charger les fichiers du client
-                loadClientFiles(client.id);
-                
-                // Ajouter le drag & drop
-                setupDragDrop(client.id);
-                
-                detailsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            } catch (error) {
-                console.error('Erreur dans showClientDetails:', error);
-                showStatus('❌ Erreur lors du chargement du client', true);
-            }
+                    <div id="filesList" class="files-list"><div class="no-files">Chargement...</div></div>
+                </div>
+            `;
+            details.classList.add('show');
+            loadClientFiles(clientId);
         }
 
-        // Charger les fichiers d'un client
         async function loadClientFiles(clientId) {
             try {
                 const response = await fetch(`${FILES_API_URL}/${clientId}`);
-                if (!response.ok) throw new Error('Erreur de chargement des fichiers');
-                
                 const data = await response.json();
-                displayClientFiles(clientId, data.files);
-            } catch (error) {
-                console.error('Erreur chargement fichiers:', error);
-                document.getElementById(`filesGrid-${clientId}`).innerHTML = '<div class="list-info">Aucun fichier pour le moment</div>';
-            }
-        }
-
-        // Afficher les fichiers d'un client
-        function displayClientFiles(clientId, files) {
-            const filesGrid = document.getElementById(`filesGrid-${clientId}`);
-            
-            if (!files || files.length === 0) {
-                filesGrid.innerHTML = '<div class="list-info">Aucun fichier pour le moment</div>';
-                return;
-            }
-            
-            filesGrid.innerHTML = files.map(file => {
-                const extension = file.originalname.split('.').pop().toLowerCase();
-                const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(extension);
-                const fileSize = formatFileSize(file.size);
-                
-                // Choisir l'icône en fonction du type de fichier
-                let fileIcon = '📄'; // Par défaut
-                if (isImage) fileIcon = '🖼️';
-                else if (extension === 'pdf') fileIcon = '📕';
-                else if (['doc', 'docx'].includes(extension)) fileIcon = '📘';
-                else if (['xls', 'xlsx'].includes(extension)) fileIcon = '📗';
-                else if (['ppt', 'pptx'].includes(extension)) fileIcon = '📙';
-                else if (['txt', 'rtf'].includes(extension)) fileIcon = '📝';
-                else if (extension === 'pages') fileIcon = '📄';
-                else if (extension === 'numbers') fileIcon = '🔢';
-                else if (extension === 'keynote') fileIcon = '📊';
-                else if (['zip', 'rar', '7z', 'tar', 'gz'].includes(extension)) fileIcon = '🗜️';
-                else if (['mp4', 'avi', 'mov', 'webm'].includes(extension)) fileIcon = '🎬';
-                else if (['mp3', 'wav', 'ogg', 'm4a'].includes(extension)) fileIcon = '🎵';
-                else if (['json', 'xml', 'yaml', 'yml'].includes(extension)) fileIcon = '🔧';
-                else if (['py', 'js', 'java', 'cpp', 'c', 'php', 'rb'].includes(extension)) fileIcon = '💻';
-                else if (['html', 'css'].includes(extension)) fileIcon = '🌐';
-                
-                return `
-                    <div class="file-card">
-                        <div class="file-preview">
-                            ${isImage 
-                                ? `<img src="${file.path}" alt="${escapeHtml(file.originalname)}">`
-                                : `<div class="file-icon">${fileIcon}</div>`
-                            }
-                        </div>
-                        <div class="file-name">${escapeHtml(file.originalname)}</div>
-                        <div class="file-size">${fileSize}</div>
-                        <div class="file-actions">
-                            <button class="btn btn-small btn-icon btn-edit" onclick="window.viewFile('${file.path}', '${escapeHtml(file.originalname)}')">👁️</button>
-                            <a href="${file.path}" download class="btn btn-small btn-icon" style="background: #50FA7B; color: #282A36; text-decoration: none; display: flex; align-items: center; justify-content: center;">⬇️</a>
-                            <button class="btn btn-small btn-icon btn-delete" onclick="window.deleteFile('${clientId}', '${file.filename}')">🗑️</button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // Gérer la sélection de fichiers
-        window.handleFileSelect = async function(clientId, event) {
-            const files = event.target.files;
-            if (files.length === 0) return;
-            
-            for (let file of files) {
-                await uploadFile(clientId, file);
-            }
-            
-            // Réinitialiser l'input
-            event.target.value = '';
-        }
-
-        // Upload un fichier
-        async function uploadFile(clientId, file) {
-            const progressDiv = document.getElementById(`uploadProgress-${clientId}`);
-            const progressFill = document.getElementById(`progressFill-${clientId}`);
-            
-            progressDiv.style.display = 'block';
-            progressFill.style.width = '0%';
-            progressFill.textContent = '0%';
-            
-            try {
-                const formData = new FormData();
-                formData.append('file', file);
-                
-                const response = await fetch(`${UPLOAD_API_URL}/${clientId}`, {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                if (!response.ok) throw new Error('Erreur upload');
-                
-                progressFill.style.width = '100%';
-                progressFill.textContent = '100%';
-                
-                showStatus('✅ Fichier uploadé avec succès !');
-                
-                // Recharger les fichiers
-                setTimeout(() => {
-                    loadClientFiles(clientId);
-                    progressDiv.style.display = 'none';
-                }, 500);
-                
-            } catch (error) {
-                console.error('Erreur upload:', error);
-                showStatus('❌ Erreur lors de l\'upload du fichier', true);
-                progressDiv.style.display = 'none';
-            }
-        }
-
-        // Supprimer un fichier
-        window.deleteFile = async function(clientId, filename) {
-            if (!confirm('Êtes-vous sûr de vouloir supprimer ce fichier ?')) return;
-            
-            try {
-                const response = await fetch(`${FILES_API_URL}/${clientId}/${filename}`, {
-                    method: 'DELETE'
-                });
-                
-                if (!response.ok) throw new Error('Erreur suppression');
-                
-                showStatus('✅ Fichier supprimé avec succès !');
-                loadClientFiles(clientId);
-                
-            } catch (error) {
-                console.error('Erreur suppression fichier:', error);
-                showStatus('❌ Erreur lors de la suppression du fichier', true);
-            }
-        }
-
-        // Setup drag & drop
-        function setupDragDrop(clientId) {
-            const uploadArea = document.getElementById(`uploadArea-${clientId}`);
-            
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                uploadArea.addEventListener(eventName, preventDefaults, false);
-            });
-            
-            function preventDefaults(e) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-            
-            ['dragenter', 'dragover'].forEach(eventName => {
-                uploadArea.addEventListener(eventName, () => {
-                    uploadArea.classList.add('dragover');
-                }, false);
-            });
-            
-            ['dragleave', 'drop'].forEach(eventName => {
-                uploadArea.addEventListener(eventName, () => {
-                    uploadArea.classList.remove('dragover');
-                }, false);
-            });
-            
-            uploadArea.addEventListener('drop', async (e) => {
-                const dt = e.dataTransfer;
-                const files = dt.files;
-                
-                for (let file of files) {
-                    await uploadFile(clientId, file);
-                }
-            }, false);
-        }
-
-        // Formater la taille de fichier
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-        }
-
-        // Fonction pour échapper le HTML
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        // Modifier un client
-        window.editClient = async function(id) {
-            try {
-                const response = await fetch(`${API_URL}/${id}`);
-                if (!response.ok) throw new Error('Erreur de chargement');
-                
-                const client = await response.json();
-                document.getElementById('nom').value = client.nom;
-                document.getElementById('email').value = client.email || '';
-                document.getElementById('telephone').value = client.telephone || '';
-                document.getElementById('notes').value = client.notes || '';
-                editingId = id;
-                
-                document.getElementById('submitBtn').textContent = 'Modifier le client';
-                
-                document.getElementById('clientForm').scrollIntoView({ behavior: 'smooth' });
-            } catch (error) {
-                showStatus('❌ Erreur lors du chargement du client', true);
-            }
-        }
-
-        // Supprimer un client
-        window.deleteClient = async function(id) {
-            if (!confirm('Êtes-vous sûr de vouloir supprimer ce client ?')) return;
-
-            try {
-                const response = await fetch(`${API_URL}/${id}`, {
-                    method: 'DELETE'
-                });
-
-                if (!response.ok) throw new Error('Erreur de suppression');
-
-                showStatus('✅ Client supprimé avec succès !');
-                
-                document.getElementById('clientDetails').classList.remove('show');
-                selectedClientId = null;
-                
-                await loadClients();
-            } catch (error) {
-                showStatus('❌ Erreur lors de la suppression du client', true);
-            }
-        }
-
-        // Recherche
-        document.getElementById('searchInput').addEventListener('input', function(e) {
-            const searchTerm = e.target.value.toLowerCase();
-            
-            if (searchTerm !== '') {
-                document.querySelectorAll('.alphabet-btn').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                currentFilter = 'search';
-            }
-            
-            if (searchTerm === '') {
-                document.getElementById('clientsList').innerHTML = `
-                    <div class="list-info">
-                        💡 Cliquez sur une lettre ci-dessus ou utilisez la recherche pour afficher vos clients
-                    </div>
-                `;
-                document.getElementById('clientDetails').classList.remove('show');
-                selectedClientId = null;
-                return;
-            }
-            
-            if (searchTerm.length < 2) {
-                document.getElementById('clientsList').innerHTML = `
-                    <div class="list-info">
-                        ⌨️ Tapez au moins 2 caractères pour rechercher...
-                    </div>
-                `;
-                return;
-            }
-            
-            let filteredClients = allClients.filter(client => 
-                client.nom.toLowerCase().includes(searchTerm) ||
-                (client.email && client.email.toLowerCase().includes(searchTerm)) ||
-                (client.telephone && client.telephone.includes(searchTerm)) ||
-                (client.notes && client.notes.toLowerCase().includes(searchTerm))
-            );
-            
-            displayClientsList(filteredClients, `Résultats de recherche : "${e.target.value}"`);
-            
-            if (selectedClientId && !filteredClients.find(c => c.id === selectedClientId)) {
-                document.getElementById('clientDetails').classList.remove('show');
-                selectedClientId = null;
-            }
-        });
-
-        // Charger les clients au démarrage
-        loadClients();
-
-        // Fonction pour visualiser un fichier
-        window.viewFile = async function(filePath, fileName) {
-            const modal = document.getElementById('viewModal');
-            const modalTitle = document.getElementById('modalTitle');
-            const modalBody = document.getElementById('modalBody');
-            
-            modalTitle.textContent = fileName;
-            
-            // Déterminer le type de fichier
-            const extension = fileName.split('.').pop().toLowerCase();
-            
-            // Images
-            if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(extension)) {
-                modalBody.innerHTML = `<img src="${filePath}" alt="${fileName}" class="modal-image">`;
-            }
-            // PDF
-            else if (extension === 'pdf') {
-                modalBody.innerHTML = `<iframe src="${filePath}" class="modal-document"></iframe>`;
-            }
-            // Texte
-            else if (['txt', 'log', 'md', 'json', 'xml', 'csv', 'rtf', 'yaml', 'yml', 'ini', 'conf'].includes(extension)) {
-                try {
-                    const response = await fetch(filePath);
-                    const text = await response.text();
-                    modalBody.innerHTML = `<div class="modal-text">${escapeHtml(text)}</div>`;
-                } catch (error) {
-                    modalBody.innerHTML = `
-                        <div class="modal-unsupported">
-                            <div class="modal-unsupported-icon">❌</div>
-                            <p>Impossible de charger le fichier texte</p>
-                        </div>
-                    `;
-                }
-            }
-            // Documents Office et Apple (via Google Docs Viewer)
-            else if (['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'pages', 'numbers', 'keynote', 'odt', 'ods', 'odp'].includes(extension)) {
-                const fullUrl = window.location.origin + filePath;
-                modalBody.innerHTML = `<iframe src="https://docs.google.com/viewer?url=${encodeURIComponent(fullUrl)}&embedded=true" class="modal-document"></iframe>`;
-            }
-            // Vidéo
-            else if (['mp4', 'webm', 'ogg'].includes(extension)) {
-                modalBody.innerHTML = `
-                    <div class="modal-video-container">
-                        <video controls class="modal-video">
-                            <source src="${filePath}" type="video/${extension}">
-                            Votre navigateur ne supporte pas la lecture vidéo.
-                        </video>
-                    </div>
-                `;
-            }
-            // Audio
-            else if (['mp3', 'wav', 'ogg'].includes(extension)) {
-                modalBody.innerHTML = `
-                    <div class="modal-audio-container">
-                        <div style="font-size: 6em; margin-bottom: 30px;">🎵</div>
-                        <div style="color: #8BE9FD; font-size: 1.2em; margin-bottom: 20px;">${fileName}</div>
-                        <audio controls style="width: 80%; max-width: 600px;">
-                            <source src="${filePath}" type="audio/${extension}">
-                            Votre navigateur ne supporte pas la lecture audio.
-                        </audio>
-                    </div>
-                `;
-            }
-            // Non supporté
-            else {
-                modalBody.innerHTML = `
-                    <div class="modal-unsupported">
-                        <div class="modal-unsupported-icon">📄</div>
-                        <p>Aperçu non disponible pour ce type de fichier</p>
-                        <p style="color: #6272A4; margin-top: 10px;">Extension: .${extension}</p>
-                        <p style="margin-top: 20px;">
-                            <a href="${filePath}" download class="btn">⬇️ Télécharger le fichier</a>
-                        </p>
-                    </div>
-                `;
-            }
-            
-            modal.classList.add('show');
-            
-            // Fermer avec Escape
-            document.addEventListener('keydown', handleEscapeKey);
-        }
-
-        // Fermer la modal
-        function closeModal() {
-            const modal = document.getElementById('viewModal');
-            modal.classList.remove('show');
-            document.removeEventListener('keydown', handleEscapeKey);
-        }
-
-        // Gérer la touche Escape
-        function handleEscapeKey(e) {
-            if (e.key === 'Escape') {
-                closeModal();
-            }
-        }
-
-        // Fermer la modal en cliquant à l'extérieur
-        document.getElementById('viewModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeModal();
-            }
-        });
-
-        // Afficher/masquer le menu d'export
-        function showExportMenu() {
-            const menu = document.getElementById('exportMenu');
-            menu.classList.toggle('show');
-        }
-
-        // Exporter les données
-        async function exportData(format) {
-            try {
-                // Charger tous les clients
-                const response = await fetch(API_URL);
-                if (!response.ok) throw new Error('Erreur de chargement');
-                const clients = await response.json();
-
-                if (clients.length === 0) {
-                    showStatus('❌ Aucun client à exporter', true);
+                const container = document.getElementById('filesList');
+                if (!data.files || data.files.length === 0) {
+                    container.innerHTML = '<div class="no-files">Aucun fichier</div>';
                     return;
                 }
+                container.innerHTML = data.files.map(file => `
+                    <div class="file-item">
+                        <div class="file-info">
+                            <span class="file-icon">${getFileIcon(file.originalname)}</span>
+                            <span class="file-name">${file.originalname}</span>
+                            <span class="file-size">${formatFileSize(file.size)}</span>
+                        </div>
+                        <div class="file-actions">
+                            <a href="${file.path}" target="_blank" class="btn btn-secondary file-btn">👁️</a>
+                            <a href="${file.path}" download class="btn btn-secondary file-btn">⬇️</a>
+                            <button class="btn btn-danger file-btn" onclick="deleteFile('${clientId}', '${file.filename}')">🗑️</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) { document.getElementById('filesList').innerHTML = '<div class="no-files">Erreur</div>'; }
+        }
 
-                let content = '';
-                let filename = '';
-                let mimeType = '';
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const icons = { pdf:'📕', doc:'📘', docx:'📘', xls:'📗', xlsx:'📗', ppt:'📙', pptx:'📙', txt:'📄', jpg:'🖼️', jpeg:'🖼️', png:'🖼️', gif:'🖼️', mp3:'🎵', mp4:'🎬', zip:'📦', rar:'📦', js:'💻', py:'🐍', html:'🌐', css:'🎨', json:'📋' };
+            return icons[ext] || '📎';
+        }
 
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024, sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        function handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('dragover'); }
+        function handleDragLeave(e) { e.currentTarget.classList.remove('dragover'); }
+        async function handleDrop(e, clientId) { e.preventDefault(); e.currentTarget.classList.remove('dragover'); if (e.dataTransfer.files.length > 0) await uploadFilesArray(e.dataTransfer.files, clientId); }
+        async function uploadFiles(e, clientId) { if (e.target.files.length > 0) await uploadFilesArray(e.target.files, clientId); }
+
+        async function uploadFilesArray(files, clientId) {
+            const formData = new FormData();
+            for (let file of files) formData.append('files', file);
+            try {
+                showStatus('⏳ Upload en cours...', false);
+                const response = await fetch(`${FILES_API_URL}/${clientId}`, { method: 'POST', body: formData });
+                if (response.ok) { showStatus(`✅ ${files.length} fichier(s) uploadé(s)`); loadClientFiles(clientId); }
+                else throw new Error('Erreur');
+            } catch (error) { showStatus('❌ Erreur upload', true); }
+        }
+
+        async function deleteFile(clientId, filename) {
+            if (!confirm('Supprimer ce fichier ?')) return;
+            try {
+                const response = await fetch(`${FILES_API_URL}/${clientId}/${filename}`, { method: 'DELETE' });
+                if (response.ok) { showStatus('✅ Fichier supprimé'); loadClientFiles(clientId); }
+            } catch (error) { showStatus('❌ Erreur', true); }
+        }
+
+        document.getElementById('clientForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const client = {
+                nom: document.getElementById('nom').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                telephone: document.getElementById('telephone').value.trim(),
+                notes: document.getElementById('notes').value.trim(),
+                dateAjout: new Date().toLocaleDateString('fr-FR')
+            };
+            try {
+                const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(client) });
+                if (response.ok) { showStatus('✅ Client ajouté'); resetForm(); loadClients(); }
+            } catch (error) { showStatus('❌ Erreur', true); }
+        });
+
+        function resetForm() { document.getElementById('clientForm').reset(); }
+
+        function editClient(clientId) {
+            const client = clients.find(c => c.id === clientId);
+            if (!client) return;
+            const details = document.getElementById('clientDetails');
+            details.innerHTML = `
+                <div class="detail-header"><div class="detail-title">Modifier : ${client.nom}</div></div>
+                <form class="edit-form" onsubmit="saveClient(event, '${clientId}')">
+                    <div class="form-row">
+                        <div class="form-group"><label>👤 Nom *</label><input type="text" id="editNom" value="${escapeHtml(client.nom)}" required></div>
+                        <div class="form-group"><label>📧 Email</label><input type="email" id="editEmail" value="${escapeHtml(client.email || '')}"></div>
+                        <div class="form-group"><label>📱 Téléphone</label><input type="tel" id="editTelephone" value="${escapeHtml(client.telephone || '')}"></div>
+                    </div>
+                    <div class="form-group"><label>📝 Notes</label><textarea id="editNotes">${escapeHtml(client.notes || '')}</textarea></div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="selectClient('${clientId}')">❌ Annuler</button>
+                        <button type="submit" class="btn">💾 Enregistrer</button>
+                    </div>
+                </form>
+            `;
+        }
+
+        async function saveClient(e, clientId) {
+            e.preventDefault();
+            const client = {
+                nom: document.getElementById('editNom').value.trim(),
+                email: document.getElementById('editEmail').value.trim(),
+                telephone: document.getElementById('editTelephone').value.trim(),
+                notes: document.getElementById('editNotes').value.trim()
+            };
+            try {
+                const response = await fetch(`${API_URL}/${clientId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(client) });
+                if (response.ok) { showStatus('✅ Client modifié'); loadClients(); setTimeout(() => selectClient(clientId), 100); }
+            } catch (error) { showStatus('❌ Erreur', true); }
+        }
+
+        function confirmDelete(clientId) {
+            const client = clients.find(c => c.id === clientId);
+            pendingAction = () => deleteClient(clientId);
+            document.getElementById('confirmMessage').innerHTML = `Supprimer <strong>${client.nom}</strong> et tous ses fichiers ?`;
+            document.getElementById('confirmModal').classList.add('show');
+        }
+
+        function closeConfirmModal() { document.getElementById('confirmModal').classList.remove('show'); pendingAction = null; }
+        function confirmAction() { if (pendingAction) { pendingAction(); closeConfirmModal(); } }
+
+        async function deleteClient(clientId) {
+            try {
+                const response = await fetch(`${API_URL}/${clientId}`, { method: 'DELETE' });
+                if (response.ok) { showStatus('✅ Client supprimé'); document.getElementById('clientDetails').classList.remove('show'); selectedClientId = null; loadClients(); }
+            } catch (error) { showStatus('❌ Erreur', true); }
+        }
+
+        function escapeHtml(text) { if (!text) return ''; const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
+
+        function showStatus(message, isError = false) {
+            const status = document.getElementById('statusMessage');
+            status.textContent = message;
+            status.className = `status-message ${isError ? 'status-error' : 'status-success'}`;
+            status.style.display = 'block';
+            setTimeout(() => { status.style.display = 'none'; }, 4000);
+        }
+
+        async function exportData(format) {
+            try {
+                let content, filename, mimeType;
                 const date = new Date().toISOString().split('T')[0];
-
                 switch(format) {
                     case 'json':
                         content = JSON.stringify(clients, null, 2);
                         filename = `clients-${date}.json`;
                         mimeType = 'application/json';
                         break;
-
                     case 'csv':
-                        // En-têtes CSV
-                        content = 'Nom,Email,Téléphone,Notes,Date d\'ajout\n';
-                        // Données
-                        clients.forEach(client => {
-                            const nom = escapeCsv(client.nom);
-                            const email = escapeCsv(client.email || '');
-                            const telephone = escapeCsv(client.telephone || '');
-                            const notes = escapeCsv(client.notes || '');
-                            const dateAjout = escapeCsv(client.dateAjout || '');
-                            content += `${nom},${email},${telephone},${notes},${dateAjout}\n`;
-                        });
+                        const headers = ['Nom', 'Email', 'Téléphone', 'Notes', 'Date Ajout', 'ID'];
+                        const rows = clients.map(c => [escapeCsv(c.nom), escapeCsv(c.email), escapeCsv(c.telephone), escapeCsv(c.notes), escapeCsv(c.dateAjout), c.id]);
+                        content = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
                         filename = `clients-${date}.csv`;
                         mimeType = 'text/csv;charset=utf-8;';
                         break;
-
                     case 'txt':
-                        content = '═══════════════════════════════════════════════════════════\n';
-                        content += '              BASE DE DONNÉES CLIENTS\n';
-                        content += `              Export du ${new Date().toLocaleDateString('fr-FR')}\n`;
-                        content += '═══════════════════════════════════════════════════════════\n\n';
-                        content += `Total : ${clients.length} client(s)\n\n`;
-                        
-                        clients.forEach((client, index) => {
-                            content += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                            content += `CLIENT #${index + 1}\n`;
-                            content += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-                            content += `👤 Nom       : ${client.nom}\n`;
-                            content += `📧 Email     : ${client.email || 'Non renseigné'}\n`;
-                            content += `📱 Téléphone : ${client.telephone || 'Non renseigné'}\n`;
-                            content += `📅 Ajouté le : ${client.dateAjout || 'N/A'}\n\n`;
-                            
-                            if (client.notes) {
-                                content += `📝 NOTES :\n`;
-                                content += `┌${'─'.repeat(57)}┐\n`;
-                                const noteLines = client.notes.split('\n');
-                                noteLines.forEach(line => {
-                                    content += `│ ${line.padEnd(56)}│\n`;
-                                });
-                                content += `└${'─'.repeat(57)}┘\n`;
-                            }
-                            content += '\n\n';
-                        });
-                        
-                        content += '═══════════════════════════════════════════════════════════\n';
-                        content += '                     FIN DE L\'EXPORT\n';
-                        content += '═══════════════════════════════════════════════════════════\n';
-                        
+                        content = clients.map(c => `═══════════════════════════════════════\n👤 ${c.nom}\n📧 ${c.email || '—'}\n📱 ${c.telephone || '—'}\n📅 ${c.dateAjout || '—'}\n${c.notes ? '📝 ' + c.notes + '\n' : ''}═══════════════════════════════════════`).join('\n\n');
                         filename = `clients-${date}.txt`;
                         mimeType = 'text/plain;charset=utf-8;';
                         break;
-
                     case 'html':
-                        content = `<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Export Clients - ${date}</title>
-    <style>
-        body {
-            font-family: 'Courier New', monospace;
-            background: #282A36;
-            color: #F8F8F2;
-            padding: 40px;
-            line-height: 1.6;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: #44475A;
-            padding: 30px;
-            border-radius: 10px;
-        }
-        h1 {
-            color: #FF79C6;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .stats {
-            background: #282A36;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 30px;
-            text-align: center;
-            border: 2px solid #BD93F9;
-        }
-        .client {
-            background: #282A36;
-            border: 2px solid #6272A4;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            page-break-inside: avoid;
-        }
-        .client-name {
-            color: #FF79C6;
-            font-size: 1.5em;
-            font-weight: bold;
-            margin-bottom: 15px;
-        }
-        .client-info {
-            margin-bottom: 10px;
-        }
-        .label {
-            color: #8BE9FD;
-            font-weight: bold;
-        }
-        .notes {
-            background: #44475A;
-            padding: 15px;
-            border-left: 4px solid #50FA7B;
-            margin-top: 15px;
-            white-space: pre-wrap;
-            color: #F1FA8C;
-        }
-        @media print {
-            body {
-                background: white;
-                color: black;
-            }
-            .container {
-                background: white;
-            }
-            .client {
-                border: 2px solid #ccc;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>📋 Base de données clients</h1>
-        <div class="stats">
-            <strong>Export du ${new Date().toLocaleDateString('fr-FR')}</strong><br>
-            Total : ${clients.length} client(s)
-        </div>
-`;
-                        
-                        clients.forEach((client, index) => {
-                            content += `
-        <div class="client">
-            <div class="client-name">#${index + 1} - ${escapeHtml(client.nom)}</div>
-            <div class="client-info"><span class="label">📧 Email:</span> ${escapeHtml(client.email || 'Non renseigné')}</div>
-            <div class="client-info"><span class="label">📱 Téléphone:</span> ${escapeHtml(client.telephone || 'Non renseigné')}</div>
-            <div class="client-info"><span class="label">📅 Ajouté le:</span> ${client.dateAjout || 'N/A'}</div>
-            ${client.notes ? `<div class="notes"><strong>📝 Notes:</strong><br>${escapeHtml(client.notes)}</div>` : ''}
-        </div>
-`;
-                        });
-                        
-                        content += `
-    </div>
-</body>
-</html>`;
+                        content = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Export Clients</title><style>body{font-family:system-ui;background:#0d1117;color:#e6edf3;padding:40px}h1{color:#3fb950}.client{background:#161b22;padding:20px;margin:15px 0;border-radius:8px;border:1px solid #30363d}.client h2{color:#56d4dd;margin:0 0 10px 0}.label{color:#8b949e}</style></head><body><h1>📋 Liste des Clients</h1><p>Export du ${new Date().toLocaleString('fr-FR')}</p>${clients.map(c => `<div class="client"><h2>${escapeHtml(c.nom)}</h2><div><span class="label">📧 Email:</span> ${escapeHtml(c.email) || '—'}</div><div><span class="label">📱 Tél:</span> ${escapeHtml(c.telephone) || '—'}</div><div><span class="label">📅 Ajouté:</span> ${c.dateAjout || '—'}</div>${c.notes ? '<div><span class="label">📝 Notes:</span><br>' + escapeHtml(c.notes) + '</div>' : ''}</div>`).join('')}</body></html>`;
                         filename = `clients-${date}.html`;
                         mimeType = 'text/html;charset=utf-8;';
                         break;
                 }
-
-                // Télécharger le fichier
                 const blob = new Blob([content], { type: mimeType });
                 const url = window.URL.createObjectURL(blob);
                 const link = document.createElement('a');
@@ -1709,202 +693,63 @@
                 link.click();
                 document.body.removeChild(link);
                 window.URL.revokeObjectURL(url);
-
-                showStatus(`✅ Export ${format.toUpperCase()} réussi ! (${filename})`);
-                
-            } catch (error) {
-                console.error('Erreur export:', error);
-                showStatus('❌ Erreur lors de l\'export', true);
-            }
+                showStatus(`✅ Export ${format.toUpperCase()} réussi !`);
+            } catch (error) { showStatus('❌ Erreur export', true); }
         }
 
-        // Échapper les caractères CSV
         function escapeCsv(str) {
             if (str === null || str === undefined) return '';
             str = String(str);
-            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-                return '"' + str.replace(/"/g, '""') + '"';
-            }
+            if (str.includes(',') || str.includes('"') || str.includes('\n')) return '"' + str.replace(/"/g, '""') + '"';
             return str;
         }
 
-        // Exporter les données avec les fichiers (ZIP) - VERSION SERVEUR
         async function exportDataWithFiles() {
             try {
-                showStatus('⏳ Préparation de l\'export complet (peut prendre quelques minutes pour les gros volumes)...', false);
-                
-                // Appeler la route serveur qui génère le ZIP
-                const response = await fetch('/export-all', {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/zip'
-                    }
-                });
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('Erreur réponse:', response.status, errorText);
-                    throw new Error(`Erreur ${response.status}: ${errorText}`);
-                }
-                
-                showStatus('⏳ Téléchargement de l\'archive en cours...', false);
-                
-                // Récupérer le blob
+                showStatus('⏳ Préparation export...', false);
+                const response = await fetch('/export-all', { method: 'GET', headers: { 'Accept': 'application/zip' } });
+                if (!response.ok) throw new Error(`Erreur ${response.status}`);
                 const blob = await response.blob();
-                
-                console.log('Taille du blob reçu:', blob.size, 'bytes');
-                
-                if (blob.size < 1000) {
-                    throw new Error('Le fichier ZIP est trop petit, il y a eu une erreur');
-                }
-                
-                // Créer le lien de téléchargement
+                if (blob.size < 1000) throw new Error('ZIP invalide');
                 const url = window.URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
-                
-                const date = new Date().toISOString().split('T')[0];
-                link.download = `export-complet-clients-${date}.zip`;
-                
+                link.download = `export-complet-clients-${new Date().toISOString().split('T')[0]}.zip`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
                 window.URL.revokeObjectURL(url);
-
-                showStatus(`✅ Export complet réussi ! Téléchargement terminé (${(blob.size / 1024 / 1024).toFixed(2)} MB).`);
-
-            } catch (error) {
-                console.error('Erreur export complet:', error);
-                showStatus(`❌ Erreur: ${error.message}`, true);
-            }
+                showStatus(`✅ Export complet réussi !`);
+            } catch (error) { showStatus(`❌ Erreur: ${error.message}`, true); }
         }
 
-        // Exporter un seul client avec ses fichiers (ZIP)
         window.exportSingleClient = async function(clientId) {
             try {
-                showStatus('⏳ Préparation de l\'export...', false);
-                
-                // Charger les données du client
+                showStatus('⏳ Export en cours...', false);
                 const response = await fetch(`${API_URL}/${clientId}`);
-                if (!response.ok) throw new Error('Erreur de chargement');
                 const client = await response.json();
-
-                // Créer le ZIP
                 const zip = new JSZip();
                 const date = new Date().toISOString().split('T')[0];
-                const safeName = client.nom
-                    .replace(/[<>:"/\\|?*]/g, '_')
-                    .replace(/\s+/g, '_')
-                    .trim();
-
-                // Ajouter les données du client en JSON
+                const safeName = client.nom.replace(/[<>:"/\\|?*]/g, '_').replace(/\s+/g, '_');
                 zip.file('client.json', JSON.stringify(client, null, 2));
-
-                // Ajouter les données du client en TXT formaté
-                let txtContent = '═══════════════════════════════════════════════════════════\n';
-                txtContent += '              FICHE CLIENT\n';
-                txtContent += `              Export du ${new Date().toLocaleDateString('fr-FR')}\n`;
-                txtContent += '═══════════════════════════════════════════════════════════\n\n';
-                
-                txtContent += `👤 Nom       : ${client.nom}\n`;
-                txtContent += `📧 Email     : ${client.email || 'Non renseigné'}\n`;
-                txtContent += `📱 Téléphone : ${client.telephone || 'Non renseigné'}\n`;
-                txtContent += `📅 Ajouté le : ${client.dateAjout || 'N/A'}\n`;
-                txtContent += `🆔 ID        : ${client.id}\n\n`;
-                
-                if (client.notes) {
-                    txtContent += `📝 NOTES :\n`;
-                    txtContent += `┌${'─'.repeat(57)}┐\n`;
-                    const noteLines = client.notes.split('\n');
-                    noteLines.forEach(line => {
-                        txtContent += `│ ${line.padEnd(56)}│\n`;
-                    });
-                    txtContent += `└${'─'.repeat(57)}┘\n`;
-                }
-                
-                txtContent += '\n═══════════════════════════════════════════════════════════\n';
-                
-                zip.file('client.txt', txtContent);
-
-                // Charger les fichiers du client
+                zip.file('client.txt', `FICHE CLIENT\n═══════════════════════════════════════\n👤 ${client.nom}\n📧 ${client.email || '—'}\n📱 ${client.telephone || '—'}\n📅 ${client.dateAjout || '—'}\n🆔 ${client.id}\n${client.notes ? '\n📝 Notes:\n' + client.notes : ''}`);
                 let totalFiles = 0;
                 try {
                     const filesResponse = await fetch(`${FILES_API_URL}/${client.id}`);
                     if (filesResponse.ok) {
                         const filesData = await filesResponse.json();
-                        
                         if (filesData.files && filesData.files.length > 0) {
-                            // Créer un dossier pour les fichiers
                             const filesFolder = zip.folder('fichiers');
-                            
-                            // Créer un fichier index des fichiers
-                            let filesIndex = `FICHIERS DU CLIENT: ${client.nom}\n`;
-                            filesIndex += `${'═'.repeat(60)}\n\n`;
-                            filesIndex += `Nombre de fichiers: ${filesData.files.length}\n\n`;
-                            filesIndex += `Liste des fichiers:\n`;
-                            filesIndex += `${'─'.repeat(60)}\n`;
-                            
-                            filesData.files.forEach((f, i) => {
-                                filesIndex += `${i + 1}. ${f.originalname} (${formatFileSize(f.size)})\n`;
-                            });
-                            
-                            filesFolder.file('_liste_fichiers.txt', filesIndex);
-                            
-                            // Télécharger et ajouter chaque fichier
                             for (const file of filesData.files) {
                                 try {
-                                    showStatus(`⏳ Téléchargement de ${file.originalname}...`, false);
                                     const fileResponse = await fetch(file.path);
-                                    if (fileResponse.ok) {
-                                        const fileBlob = await fileResponse.blob();
-                                        filesFolder.file(file.originalname, fileBlob);
-                                        totalFiles++;
-                                    }
-                                } catch (fileError) {
-                                    console.error(`Erreur fichier ${file.filename}:`, fileError);
-                                }
+                                    if (fileResponse.ok) { filesFolder.file(file.originalname, await fileResponse.blob()); totalFiles++; }
+                                } catch (e) {}
                             }
                         }
                     }
-                } catch (filesError) {
-                    console.error('Erreur chargement fichiers:', filesError);
-                }
-
-                // Créer un README
-                const readme = `EXPORT CLIENT: ${client.nom}
-═══════════════════════════════════════════════════════════
-
-📅 Date d'export : ${new Date().toLocaleString('fr-FR')}
-👤 Client        : ${client.nom}
-📧 Email         : ${client.email || 'N/A'}
-📱 Téléphone     : ${client.telephone || 'N/A'}
-
-📁 CONTENU DE L'ARCHIVE :
-─────────────────────────────────────────────────────────
-• README.txt    : Ce fichier
-• client.json   : Données du client (format JSON)
-• client.txt    : Fiche client lisible (format TXT)
-• fichiers/     : Dossier contenant les fichiers du client (${totalFiles})
-
-🔧 UTILISATION :
-─────────────────────────────────────────────────────────
-1. Extraire l'archive ZIP
-2. Consulter client.txt pour les informations
-3. Les fichiers uploadés sont dans le dossier fichiers/
-
-═══════════════════════════════════════════════════════════`;
-                
-                zip.file('README.txt', readme);
-
-                showStatus('⏳ Génération du fichier ZIP...', false);
-
-                // Générer et télécharger le ZIP
-                const zipBlob = await zip.generateAsync({
-                    type: 'blob',
-                    compression: 'DEFLATE',
-                    compressionOptions: { level: 9 }
-                });
-
+                } catch (e) {}
+                const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 9 } });
                 const url = window.URL.createObjectURL(zipBlob);
                 const link = document.createElement('a');
                 link.href = url;
@@ -1913,13 +758,27 @@
                 link.click();
                 document.body.removeChild(link);
                 window.URL.revokeObjectURL(url);
+                showStatus(`✅ Export: ${client.nom} + ${totalFiles} fichier(s)`);
+            } catch (error) { showStatus('❌ Erreur export', true); }
+        }
 
-                showStatus(`✅ Export réussi ! ${client.nom} + ${totalFiles} fichier(s)`);
-
-            } catch (error) {
-                console.error('Erreur export client:', error);
-                showStatus('❌ Erreur lors de l\'export du client', true);
-            }
+        async function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            try {
+                const imported = JSON.parse(await file.text());
+                if (!Array.isArray(imported)) throw new Error('Format invalide');
+                let count = 0;
+                for (const client of imported) {
+                    if (client.nom) {
+                        await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nom: client.nom, email: client.email || '', telephone: client.telephone || '', notes: client.notes || '', dateAjout: client.dateAjout || new Date().toLocaleDateString('fr-FR') }) });
+                        count++;
+                    }
+                }
+                showStatus(`✅ ${count} client(s) importé(s)`);
+                loadClients();
+            } catch (error) { showStatus('❌ Erreur import', true); }
+            event.target.value = '';
         }
     </script>
 </body>
