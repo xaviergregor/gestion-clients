@@ -46,7 +46,7 @@
 - 🚫 Accès protégé aux fichiers uploadés
 
 ### 🎨 Interface
-- 🌙 Thème sombre Dracula (violet/rose)
+- 🌙 Thème sombre
 - 📱 Responsive (PC, tablette, mobile)
 - ⚡ Animations fluides
 - 🖱️ UX intuitive
@@ -69,7 +69,7 @@
 
 ### Installation guidée (15 minutes)
 
-Suivez le **GUIDE-RAPIDE.md** pour une installation pas à pas.
+Suivez le **NSTALLATION-EXPRESS.md** pour une installation pas à pas.
 
 ---
 
@@ -77,8 +77,7 @@ Suivez le **GUIDE-RAPIDE.md** pour une installation pas à pas.
 
 | Document | Description |
 |----------|-------------|
-| **GUIDE-RAPIDE.md** | Installation en 15 minutes ⚡ |
-| **INSTALLATION-COMPLETE.md** | Documentation détaillée complète 📖 |
+| **NSTALLATION-EXPRESS.md** | Installation en 15 minutes ⚡ |
 
 ---
 
@@ -89,11 +88,6 @@ Suivez le **GUIDE-RAPIDE.md** pour une installation pas à pas.
 ```
 http://VOTRE_IP/gestion-clients/index.html
 ```
-
-**Identifiants par défaut :**
-- Utilisateur : `admin`
-- Mot de passe : (celui que vous avez défini)
-
 ---
 
 ## 📁 Structure du projet
