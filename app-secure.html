@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestion de Clients - Base de données</title>
+    <title>Gestion de Clients - XGR Solutions</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         :root {
@@ -37,6 +37,7 @@
             --glow-green: 0 0 20px rgba(63, 185, 80, 0.4);
             --glow-green-soft: 0 0 10px rgba(63, 185, 80, 0.2);
             --shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            --sidebar-width: 320px;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -44,8 +45,8 @@
             background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
-            padding: 20px;
             line-height: 1.6;
+            overflow: hidden;
         }
         body::before {
             content: '';
@@ -56,390 +57,868 @@
             pointer-events: none;
             z-index: 9999;
         }
-        .container { max-width: 1400px; margin: 0 auto; }
-        h1 {
-            color: var(--green-bright);
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 2.2em;
-            text-shadow: var(--glow-green);
+
+        /* === LAYOUT PRINCIPAL === */
+        .app-layout {
+            display: flex;
+            height: 100vh;
         }
-        h1::before { content: '> '; color: var(--text-muted); }
-        .card {
+
+        /* === SIDEBAR === */
+        .sidebar {
+            width: var(--sidebar-width);
             background: var(--bg-secondary);
-            border-radius: 8px;
-            padding: 25px;
-            box-shadow: var(--shadow);
-            margin-bottom: 25px;
-            border: 1px solid var(--border);
-            transition: border-color 0.3s;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
         }
-        .card:hover { border-color: var(--green-dim); }
-        h2 {
-            color: var(--cyan);
-            margin-bottom: 20px;
-            font-size: 1.3em;
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-card);
         }
-        h2::before { content: '# '; color: var(--text-muted); }
-        h3 {
-            color: var(--green-bright);
-            margin-top: 20px;
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
             margin-bottom: 15px;
+        }
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--green-subtle);
+            border: 1px solid var(--green-dim);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4em;
+        }
+        .logo-text {
             font-size: 1.1em;
+            font-weight: 700;
+            color: var(--green-bright);
+            text-shadow: var(--glow-green-soft);
         }
-        h3::before { content: '## '; color: var(--text-muted); }
-        .form-group { margin-bottom: 15px; }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            color: var(--yellow-bright);
-            font-weight: 600;
-            font-size: 0.9em;
+        .logo-sub {
+            font-size: 0.7em;
+            color: var(--text-muted);
+            font-weight: normal;
         }
-        input, textarea {
-            width: 100%;
-            padding: 12px;
+        .user-badge {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            background: var(--bg-primary);
+            border-radius: 8px;
             border: 1px solid var(--border);
+        }
+        .user-badge-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85em;
+        }
+        .user-badge-info span { color: var(--cyan); font-weight: 600; }
+        .btn-logout {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 6px 10px;
             border-radius: 6px;
-            font-size: 14px;
-            transition: all 0.3s;
-            background: var(--bg-input);
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: all 0.2s;
+        }
+        .btn-logout:hover {
+            border-color: var(--red);
+            color: var(--red);
+            background: rgba(248,81,73,0.1);
+        }
+
+        /* Stats mini */
+        .sidebar-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        .mini-stat {
+            text-align: center;
+            padding: 8px 5px;
+            background: var(--bg-card);
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+        .mini-stat-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--green-bright);
+        }
+        .mini-stat-label {
+            font-size: 0.65em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Search */
+        .sidebar-search {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        .search-input {
+            width: 100%;
+            padding: 10px 12px 10px 36px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
             color: var(--text-primary);
             font-family: inherit;
+            font-size: 0.9em;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%236e7681' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: 10px center;
+            transition: all 0.2s;
         }
-        input:focus, textarea:focus {
+        .search-input:focus {
             outline: none;
             border-color: var(--green-bright);
             box-shadow: 0 0 0 3px var(--green-subtle);
         }
-        input::placeholder, textarea::placeholder { color: var(--text-muted); }
-        textarea { resize: vertical; min-height: 120px; }
-        .btn {
-            background: var(--green-default);
-            color: var(--text-bright);
-            border: none;
-            padding: 12px 24px;
-            border-radius: 6px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: 600;
-            font-family: inherit;
-            display: inline-flex;
+        .search-input::placeholder { color: var(--text-muted); }
+
+        /* Clients list */
+        .clients-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        .clients-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .client-item {
+            display: flex;
             align-items: center;
-            gap: 8px;
-        }
-        .btn:hover {
-            background: var(--green-bright);
-            box-shadow: var(--glow-green);
-            transform: translateY(-1px);
-        }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-        .btn-danger { background: var(--red); }
-        .btn-danger:hover { background: var(--red-bright); box-shadow: 0 0 20px rgba(248,81,73,0.4); }
-        .btn-secondary { background: var(--bg-card); border: 1px solid var(--border); }
-        .btn-secondary:hover { background: var(--bg-hover); border-color: var(--green-bright); box-shadow: var(--glow-green-soft); }
-        .btn-purple { background: var(--purple); }
-        .btn-purple:hover { background: var(--purple-bright); box-shadow: 0 0 20px rgba(163,113,247,0.4); }
-        .btn-cyan { background: #0d7377; color: var(--cyan-bright); }
-        .btn-cyan:hover { background: var(--cyan); color: var(--bg-primary); }
-        .search-box { margin-bottom: 20px; }
-        .search-box input {
-            padding-left: 40px;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%236e7681' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: 12px center;
-        }
-        .clients-list { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; }
-        .client-button {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 15px 20px;
-            color: var(--green-bright);
-            font-size: 1em;
-            font-weight: 600;
+            gap: 12px;
+            padding: 12px 14px;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 8px;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.2s;
             text-align: left;
             font-family: inherit;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            color: var(--text-primary);
+            width: 100%;
         }
-        .client-button:hover {
-            border-color: var(--green-bright);
-            background: var(--bg-hover);
-            box-shadow: var(--glow-green-soft);
-            transform: translateX(4px);
-        }
-        .client-button.active { border-color: var(--green-bright); background: var(--bg-hover); box-shadow: var(--glow-green); }
-        .client-button::before { content: '├── '; color: var(--text-muted); font-weight: normal; }
-        .client-arrow { color: var(--cyan); font-size: 1.1em; transition: transform 0.3s; }
-        .client-button:hover .client-arrow { transform: translateX(4px); }
-        .client-details {
-            display: none;
+        .client-item:hover {
             background: var(--bg-card);
-            border: 1px solid var(--green-bright);
+            border-color: var(--border);
+        }
+        .client-item.active {
+            background: var(--green-subtle);
+            border-color: var(--green-dim);
+        }
+        .client-avatar {
+            width: 36px;
+            height: 36px;
+            background: var(--bg-hover);
             border-radius: 8px;
-            padding: 25px;
-            margin-top: 20px;
-            box-shadow: var(--glow-green-soft);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9em;
+            color: var(--cyan);
+            font-weight: 600;
+            flex-shrink: 0;
         }
-        .client-details.show { display: block; animation: slideDown 0.3s ease; }
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
+        .client-item.active .client-avatar {
+            background: var(--green-default);
+            color: var(--text-bright);
         }
-        .detail-header {
+        .client-info-preview {
+            flex: 1;
+            min-width: 0;
+        }
+        .client-name {
+            font-weight: 600;
+            font-size: 0.9em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .client-email-preview {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Add button */
+        .sidebar-footer {
+            padding: 15px 20px;
+            border-top: 1px solid var(--border);
+            background: var(--bg-card);
+        }
+        .btn-add-client {
+            width: 100%;
+            padding: 12px;
+            background: var(--green-default);
+            border: none;
+            border-radius: 8px;
+            color: var(--text-bright);
+            font-family: inherit;
+            font-size: 0.9em;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .btn-add-client:hover {
+            background: var(--green-bright);
+            box-shadow: var(--glow-green);
+        }
+
+        /* === MAIN CONTENT === */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .main-header {
+            padding: 20px 30px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-secondary);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid var(--border);
         }
-        .detail-title {
-            font-size: 1.5em;
-            font-weight: bold;
+        .main-title {
+            font-size: 1.3em;
             color: var(--green-bright);
-            text-shadow: var(--glow-green-soft);
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        .detail-title::before { content: '> '; color: var(--text-muted); }
-        .detail-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-        .client-info { color: var(--text-primary); margin-bottom: 12px; line-height: 1.8; font-size: 0.95em; }
-        .client-info strong { color: var(--cyan); display: inline-block; min-width: 120px; }
-        .client-notes {
-            background: var(--bg-secondary);
-            padding: 15px;
-            border-radius: 6px;
-            margin-top: 15px;
-            border-left: 3px solid var(--green-bright);
+        .main-title::before { content: '>'; color: var(--text-muted); }
+        .main-actions {
+            display: flex;
+            gap: 8px;
         }
-        .notes-label { color: var(--yellow-bright); font-weight: 600; margin-bottom: 10px; font-size: 0.9em; }
-        .notes-content { white-space: pre-wrap; font-family: inherit; color: var(--text-secondary); line-height: 1.7; }
-        .files-section { margin-top: 25px; padding-top: 20px; border-top: 1px solid var(--border); }
-        .files-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .files-title { color: var(--purple); font-size: 1.1em; }
-        .files-title::before { content: '📁 '; }
-        .file-upload-zone {
-            border: 2px dashed var(--border);
-            border-radius: 8px;
+
+        .main-body {
+            flex: 1;
+            overflow-y: auto;
             padding: 30px;
-            text-align: center;
-            margin-bottom: 20px;
-            transition: all 0.3s;
-            cursor: pointer;
         }
-        .file-upload-zone:hover, .file-upload-zone.dragover {
+
+        /* Welcome state */
+        .welcome-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            color: var(--text-muted);
+        }
+        .welcome-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        .welcome-title {
+            font-size: 1.3em;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+        .welcome-text {
+            font-size: 0.9em;
+            max-width: 400px;
+        }
+
+        /* Client detail view */
+        .client-detail {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .detail-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+        .detail-card-header {
+            padding: 20px 25px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .detail-card-title {
+            font-size: 1em;
+            color: var(--cyan);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .detail-card-body {
+            padding: 25px;
+        }
+
+        /* Client header in detail */
+        .client-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 25px;
+        }
+        .client-header-avatar {
+            width: 70px;
+            height: 70px;
+            background: var(--green-subtle);
+            border: 2px solid var(--green-dim);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8em;
+            color: var(--green-bright);
+            font-weight: 700;
+        }
+        .client-header-info {
+            flex: 1;
+        }
+        .client-header-name {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: var(--text-bright);
+            margin-bottom: 5px;
+        }
+        .client-header-meta {
+            font-size: 0.85em;
+            color: var(--text-muted);
+        }
+        .client-header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* Info grid */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        .info-item {
+            padding: 15px;
+            background: var(--bg-card);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        .info-label {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+        .info-value {
+            font-size: 1em;
+            color: var(--text-primary);
+            word-break: break-word;
+        }
+        .info-value.empty { color: var(--text-muted); font-style: italic; }
+
+        /* Notes */
+        .notes-content {
+            background: var(--bg-card);
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 3px solid var(--green-bright);
+            white-space: pre-wrap;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            font-size: 0.95em;
+        }
+
+        /* Files */
+        .files-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 12px;
+        }
+        .file-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 15px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .file-card:hover {
+            border-color: var(--cyan);
+        }
+        .file-icon {
+            width: 42px;
+            height: 42px;
+            background: var(--bg-hover);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3em;
+            flex-shrink: 0;
+        }
+        .file-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .file-name {
+            font-weight: 500;
+            font-size: 0.9em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .file-size {
+            font-size: 0.75em;
+            color: var(--text-muted);
+        }
+        .file-actions {
+            display: flex;
+            gap: 6px;
+        }
+        .file-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            font-size: 0.9em;
+        }
+        .file-btn:hover {
+            background: var(--green-subtle);
+            border-color: var(--green-dim);
+            color: var(--green-bright);
+        }
+        .file-btn.danger:hover {
+            background: rgba(248,81,73,0.1);
+            border-color: var(--red);
+            color: var(--red);
+        }
+
+        /* Upload zone */
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 20px;
+        }
+        .upload-zone:hover, .upload-zone.dragover {
             border-color: var(--green-bright);
             background: var(--green-subtle);
         }
-        .file-upload-zone.dragover { box-shadow: var(--glow-green); }
-        .upload-icon { font-size: 2.5em; margin-bottom: 10px; }
-        .upload-text { color: var(--text-secondary); margin-bottom: 10px; }
-        .upload-hint { color: var(--text-muted); font-size: 0.85em; }
-        .files-list { display: flex; flex-direction: column; gap: 8px; }
-        .file-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 12px 15px;
+        .upload-zone-icon { font-size: 2.5em; margin-bottom: 10px; }
+        .upload-zone-text { color: var(--text-secondary); margin-bottom: 5px; }
+        .upload-zone-hint { color: var(--text-muted); font-size: 0.85em; }
+
+        .no-files {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
+        /* === FORM PANEL (Slide-in) === */
+        .form-panel {
+            position: fixed;
+            top: 0;
+            right: -500px;
+            width: 480px;
+            max-width: 100%;
+            height: 100vh;
             background: var(--bg-secondary);
-            border-radius: 6px;
+            border-left: 1px solid var(--border);
+            box-shadow: -10px 0 40px rgba(0,0,0,0.5);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            transition: right 0.3s ease;
+        }
+        .form-panel.open { right: 0; }
+        .form-panel-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-card);
+        }
+        .form-panel-title {
+            font-size: 1.1em;
+            color: var(--green-bright);
+        }
+        .form-panel-close {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5em;
+            cursor: pointer;
+            padding: 5px;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+        .form-panel-close:hover { color: var(--text-primary); }
+        .form-panel-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 25px;
+        }
+        .form-group { margin-bottom: 20px; }
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--yellow-bright);
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+        .form-input, .form-textarea {
+            width: 100%;
+            padding: 12px 14px;
+            background: var(--bg-primary);
             border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.95em;
+            transition: all 0.2s;
+        }
+        .form-input:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--green-bright);
+            box-shadow: 0 0 0 3px var(--green-subtle);
+        }
+        .form-input::placeholder, .form-textarea::placeholder { color: var(--text-muted); }
+        .form-textarea { min-height: 150px; resize: vertical; }
+        .form-panel-footer {
+            padding: 20px 25px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            background: var(--bg-card);
+        }
+        .form-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
             transition: all 0.3s;
         }
-        .file-item:hover { border-color: var(--cyan); }
-        .file-info { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
-        .file-icon { font-size: 1.3em; }
-        .file-name { color: var(--text-primary); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .file-size { color: var(--text-muted); font-size: 0.85em; margin-left: 10px; }
-        .file-actions { display: flex; gap: 8px; }
-        .file-btn { padding: 6px 12px; font-size: 0.85em; border-radius: 4px; }
-        .no-files { text-align: center; padding: 30px; color: var(--text-muted); }
-        .no-files::before { content: '📭 '; font-size: 1.5em; }
-        .edit-form { background: var(--bg-secondary); padding: 20px; border-radius: 8px; border: 1px solid var(--border); }
-        .edit-form .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
-        .edit-form .form-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
-        .status-message {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            padding: 15px 25px;
+        .form-overlay.open { opacity: 1; visibility: visible; }
+
+        /* === BUTTONS === */
+        .btn {
+            padding: 10px 18px;
             border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.9em;
             font-weight: 600;
-            z-index: 1000;
-            animation: slideIn 0.3s ease;
-            max-width: 400px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid transparent;
         }
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateX(50px); }
-            to { opacity: 1; transform: translateX(0); }
+        .btn-primary {
+            background: var(--green-default);
+            color: var(--text-bright);
+            border-color: var(--green-default);
         }
-        .status-success { background: var(--green-dim); color: var(--green-bright); border: 1px solid var(--green-default); }
-        .status-error { background: rgba(248,81,73,0.2); color: var(--red-bright); border: 1px solid var(--red); }
+        .btn-primary:hover {
+            background: var(--green-bright);
+            box-shadow: var(--glow-green);
+        }
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border-color: var(--border);
+        }
+        .btn-secondary:hover {
+            background: var(--bg-hover);
+            border-color: var(--green-bright);
+        }
+        .btn-danger {
+            background: var(--red);
+            color: var(--text-bright);
+            border-color: var(--red);
+        }
+        .btn-danger:hover {
+            background: var(--red-bright);
+        }
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            justify-content: center;
+        }
+
+        /* === MODAL === */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.7);
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 1000;
+            z-index: 2000;
             opacity: 0;
             visibility: hidden;
-            transition: all 0.3s;
+            transition: all 0.2s;
         }
         .modal-overlay.show { opacity: 1; visibility: visible; }
         .modal {
             background: var(--bg-secondary);
             border: 1px solid var(--border);
-            border-radius: 12px;
+            border-radius: 16px;
             padding: 30px;
-            max-width: 500px;
+            max-width: 450px;
             width: 90%;
             transform: scale(0.9);
-            transition: transform 0.3s;
+            transition: transform 0.2s;
         }
         .modal-overlay.show .modal { transform: scale(1); }
-        .modal-title { color: var(--yellow-bright); font-size: 1.3em; margin-bottom: 15px; }
-        .modal-content { color: var(--text-secondary); margin-bottom: 25px; line-height: 1.6; }
-        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
-        .export-section { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); }
-        .header {
+        .modal-icon { font-size: 3em; text-align: center; margin-bottom: 15px; }
+        .modal-title { font-size: 1.2em; color: var(--text-bright); text-align: center; margin-bottom: 10px; }
+        .modal-text { color: var(--text-secondary); text-align: center; margin-bottom: 25px; line-height: 1.6; }
+        .modal-actions { display: flex; gap: 10px; justify-content: center; }
+
+        /* === STATUS === */
+        .status-toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-weight: 600;
+            z-index: 3000;
+            transform: translateX(150%);
+            transition: transform 0.3s ease;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid var(--border);
+            gap: 10px;
         }
-        .header-title { color: var(--green-bright); font-size: 1.8em; text-shadow: var(--glow-green); }
-        .header-title::before { content: '> '; color: var(--text-muted); }
-        .header-actions { display: flex; gap: 15px; align-items: center; }
-        .user-info { color: var(--text-secondary); font-size: 0.9em; }
-        .user-info span { color: var(--cyan); font-weight: 600; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
-        .stat-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
-            transition: all 0.3s;
+        .status-toast.show { transform: translateX(0); }
+        .status-toast.success {
+            background: var(--green-dim);
+            color: var(--green-bright);
+            border: 1px solid var(--green-default);
         }
-        .stat-card:hover { border-color: var(--green-bright); box-shadow: var(--glow-green-soft); }
-        .stat-value { font-size: 2em; font-weight: bold; color: var(--green-bright); text-shadow: var(--glow-green-soft); }
-        .stat-label { color: var(--text-muted); font-size: 0.85em; margin-top: 5px; }
-        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
-        .empty-state-icon { font-size: 4em; margin-bottom: 20px; opacity: 0.5; }
-        .empty-state-text { font-size: 1.1em; margin-bottom: 10px; }
+        .status-toast.error {
+            background: rgba(248,81,73,0.2);
+            color: var(--red-bright);
+            border: 1px solid var(--red);
+        }
+
+        /* === RESPONSIVE === */
+        @media (max-width: 900px) {
+            .sidebar { width: 280px; }
+        }
         @media (max-width: 768px) {
-            body { padding: 10px; }
-            h1 { font-size: 1.5em; }
-            .header { flex-direction: column; gap: 15px; text-align: center; }
-            .detail-header { flex-direction: column; gap: 15px; }
-            .detail-actions { width: 100%; justify-content: center; }
-            .btn { padding: 10px 16px; font-size: 13px; }
+            .app-layout { flex-direction: column; }
+            .sidebar {
+                width: 100%;
+                height: auto;
+                max-height: 50vh;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+            .main-content { height: 50vh; }
+            .form-panel { width: 100%; }
+            .main-body { padding: 20px; }
         }
-        ::-webkit-scrollbar { width: 10px; height: 10px; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: var(--bg-primary); }
-        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--green-dim); }
         ::selection { background: var(--green-subtle); color: var(--text-bright); }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="header-title">Gestion de Clients</div>
-            <div class="header-actions">
-                <div class="user-info">Connecté : <span id="currentUser">-</span></div>
-                <button class="btn btn-secondary" onclick="logout()">🚪 Déconnexion</button>
+    <div class="app-layout">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon">🖥️</div>
+                    <div>
+                        <div class="logo-text">ClientManager</div>
+                        <div class="logo-sub">XGR Solutions</div>
+                    </div>
+                </div>
+                <div class="user-badge">
+                    <div class="user-badge-info">
+                        👤 <span id="currentUser">-</span>
+                    </div>
+                    <button class="btn-logout" onclick="logout()">Déconnexion</button>
+                </div>
             </div>
+            <div class="sidebar-stats">
+                <div class="mini-stat">
+                    <div class="mini-stat-value" id="totalClients">0</div>
+                    <div class="mini-stat-label">Clients</div>
+                </div>
+                <div class="mini-stat">
+                    <div class="mini-stat-value" id="totalFiles">—</div>
+                    <div class="mini-stat-label">Fichiers</div>
+                </div>
+                <div class="mini-stat">
+                    <div class="mini-stat-value" id="lastUpdate">-</div>
+                    <div class="mini-stat-label">MAJ</div>
+                </div>
+            </div>
+            <div class="sidebar-search">
+                <input type="text" class="search-input" id="searchInput" placeholder="Rechercher..." onkeyup="filterClients()">
+            </div>
+            <div class="clients-container">
+                <div class="clients-list" id="clientsList"></div>
+            </div>
+            <div class="sidebar-footer">
+                <button class="btn-add-client" onclick="openAddForm()">
+                    <span>➕</span> Nouveau client
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+            <header class="main-header">
+                <div class="main-title" id="mainTitle">Tableau de bord</div>
+                <div class="main-actions">
+                    <button class="btn btn-secondary" onclick="showExportMenu()">📦 Export</button>
+                    <label class="btn btn-secondary" style="cursor:pointer;">
+                        📥 Import
+                        <input type="file" accept=".json" style="display:none;" onchange="importData(event)">
+                    </label>
+                </div>
+            </header>
+            <div class="main-body" id="mainBody">
+                <div class="welcome-state" id="welcomeState">
+                    <div class="welcome-icon">📋</div>
+                    <div class="welcome-title">Bienvenue dans ClientManager</div>
+                    <div class="welcome-text">Sélectionnez un client dans la liste ou créez-en un nouveau pour commencer.</div>
+                </div>
+                <div id="clientDetail" style="display:none;"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- FORM PANEL -->
+    <div class="form-overlay" id="formOverlay" onclick="closeForm()"></div>
+    <div class="form-panel" id="formPanel">
+        <div class="form-panel-header">
+            <div class="form-panel-title" id="formTitle">Nouveau client</div>
+            <button class="form-panel-close" onclick="closeForm()">&times;</button>
         </div>
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-value" id="totalClients">0</div>
-                <div class="stat-label">Clients</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="totalFiles">0</div>
-                <div class="stat-label">Fichiers</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="lastUpdate">-</div>
-                <div class="stat-label">Dernière mise à jour</div>
-            </div>
-        </div>
-        <div class="card">
-            <h2>Ajouter un client</h2>
+        <div class="form-panel-body">
             <form id="clientForm">
-                <div class="edit-form">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="nom">👤 Nom *</label>
-                            <input type="text" id="nom" required placeholder="Nom du client">
-                        </div>
-                        <div class="form-group">
-                            <label for="email">📧 Email</label>
-                            <input type="email" id="email" placeholder="email@example.com">
-                        </div>
-                        <div class="form-group">
-                            <label for="telephone">📱 Téléphone</label>
-                            <input type="tel" id="telephone" placeholder="06 12 34 56 78">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="notes">📝 Notes</label>
-                        <textarea id="notes" placeholder="Informations supplémentaires..."></textarea>
-                    </div>
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-secondary" onclick="resetForm()">↩️ Réinitialiser</button>
-                        <button type="submit" class="btn">➕ Ajouter le client</button>
-                    </div>
+                <input type="hidden" id="editingId">
+                <div class="form-group">
+                    <label class="form-label">👤 Nom *</label>
+                    <input type="text" class="form-input" id="nom" required placeholder="Nom du client">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">📧 Email</label>
+                    <input type="email" class="form-input" id="email" placeholder="email@example.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">📱 Téléphone</label>
+                    <input type="tel" class="form-input" id="telephone" placeholder="06 12 34 56 78">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">📝 Notes</label>
+                    <textarea class="form-textarea" id="notes" placeholder="Informations supplémentaires..."></textarea>
                 </div>
             </form>
         </div>
-        <div class="card">
-            <h2>Liste des clients</h2>
-            <div class="search-box">
-                <input type="text" id="searchInput" placeholder="Rechercher un client..." onkeyup="filterClients()">
-            </div>
-            <div id="clientsList" class="clients-list"></div>
+        <div class="form-panel-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeForm()">Annuler</button>
+            <button type="button" class="btn btn-primary" onclick="submitForm()">💾 Enregistrer</button>
         </div>
-        <div id="clientDetails" class="client-details"></div>
-        <div class="card">
-            <h2>Import / Export</h2>
-            <div class="export-section">
-                <button class="btn btn-secondary" onclick="exportData('json')">📄 Export JSON</button>
-                <button class="btn btn-secondary" onclick="exportData('csv')">📊 Export CSV</button>
-                <button class="btn btn-secondary" onclick="exportData('txt')">📝 Export TXT</button>
-                <button class="btn btn-secondary" onclick="exportData('html')">🌐 Export HTML</button>
-                <button class="btn btn-purple" onclick="exportDataWithFiles()">📦 Export complet (ZIP)</button>
-                <label class="btn btn-cyan" style="cursor: pointer;">
-                    📥 Import JSON
-                    <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importData(event)">
-                </label>
+    </div>
+
+    <!-- EXPORT MODAL -->
+    <div class="modal-overlay" id="exportModal">
+        <div class="modal">
+            <div class="modal-icon">📦</div>
+            <div class="modal-title">Exporter les données</div>
+            <div class="modal-text">Choisissez le format d'export souhaité</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+                <button class="btn btn-secondary" onclick="exportData('json');closeExportMenu();">📄 JSON</button>
+                <button class="btn btn-secondary" onclick="exportData('csv');closeExportMenu();">📊 CSV</button>
+                <button class="btn btn-secondary" onclick="exportData('txt');closeExportMenu();">📝 TXT</button>
+                <button class="btn btn-secondary" onclick="exportData('html');closeExportMenu();">🌐 HTML</button>
+            </div>
+            <button class="btn btn-primary" style="width:100%;margin-bottom:15px;" onclick="exportDataWithFiles();closeExportMenu();">📦 Export complet (ZIP)</button>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeExportMenu()">Fermer</button>
             </div>
         </div>
     </div>
-    <div id="confirmModal" class="modal-overlay">
+
+    <!-- CONFIRM MODAL -->
+    <div class="modal-overlay" id="confirmModal">
         <div class="modal">
-            <div class="modal-title">⚠️ Confirmation</div>
-            <div class="modal-content" id="confirmMessage">Êtes-vous sûr ?</div>
+            <div class="modal-icon">⚠️</div>
+            <div class="modal-title">Confirmation</div>
+            <div class="modal-text" id="confirmMessage">Êtes-vous sûr ?</div>
             <div class="modal-actions">
                 <button class="btn btn-secondary" onclick="closeConfirmModal()">Annuler</button>
-                <button class="btn btn-danger" id="confirmBtn" onclick="confirmAction()">Confirmer</button>
+                <button class="btn btn-danger" onclick="confirmAction()">Supprimer</button>
             </div>
         </div>
     </div>
-    <div id="statusMessage" class="status-message" style="display: none;"></div>
+
+    <!-- STATUS TOAST -->
+    <div class="status-toast" id="statusToast"></div>
+
     <script>
-        const API_URL = '/api/clients';
-        const FILES_API_URL = '/files';
+        // Configuration - Adapter selon votre installation
+        const BASE_PATH = ''; // Mettre '/gestion-clients' si dans un sous-dossier avec proxy
+        const API_URL = BASE_PATH + '/api/clients';
+        const FILES_API_URL = BASE_PATH + '/files';
         const SESSION_KEY = 'gestion-clients-token';
         let clients = [];
         let selectedClientId = null;
@@ -458,7 +937,7 @@
                 if (!data.success) { logout(); return; }
                 document.getElementById('currentUser').textContent = session.username;
                 loadClients();
-            } catch (error) { console.error('Erreur auth:', error); logout(); }
+            } catch (error) { logout(); }
         }
 
         function logout() {
@@ -473,15 +952,12 @@
                 clients = await response.json();
                 updateStats();
                 renderClients();
-            } catch (error) { console.error('Erreur:', error); showStatus('❌ Erreur de chargement', true); }
+            } catch (error) { showStatus('Erreur de chargement', true); }
         }
 
         function updateStats() {
             document.getElementById('totalClients').textContent = clients.length;
-            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('fr-FR');
-            let totalFiles = 0;
-            clients.forEach(c => { if (c.filesCount) totalFiles += c.filesCount; });
-            document.getElementById('totalFiles').textContent = totalFiles || '—';
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
         }
 
         function renderClients() {
@@ -493,15 +969,22 @@
                 (c.telephone && c.telephone.includes(searchTerm))
             );
             if (filtered.length === 0) {
-                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔍</div><div class="empty-state-text">Aucun client trouvé</div></div>';
+                container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);">Aucun client</div>';
                 return;
             }
-            container.innerHTML = filtered.map(client => `
-                <button class="client-button ${selectedClientId === client.id ? 'active' : ''}" onclick="selectClient('${client.id}')">
-                    <span>${client.nom}</span>
-                    <span class="client-arrow">→</span>
+            container.innerHTML = filtered.map(c => `
+                <button class="client-item ${selectedClientId === c.id ? 'active' : ''}" onclick="selectClient('${c.id}')">
+                    <div class="client-avatar">${getInitials(c.nom)}</div>
+                    <div class="client-info-preview">
+                        <div class="client-name">${escapeHtml(c.nom)}</div>
+                        <div class="client-email-preview">${c.email || 'Pas d\'email'}</div>
+                    </div>
                 </button>
             `).join('');
+        }
+
+        function getInitials(name) {
+            return name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
         }
 
         function filterClients() { renderClients(); }
@@ -511,33 +994,67 @@
             renderClients();
             const client = clients.find(c => c.id === clientId);
             if (!client) return;
-            const details = document.getElementById('clientDetails');
-            details.innerHTML = `
-                <div class="detail-header">
-                    <div class="detail-title">${client.nom}</div>
-                    <div class="detail-actions">
-                        <button class="btn btn-secondary" onclick="editClient('${client.id}')">✏️ Modifier</button>
-                        <button class="btn btn-purple" onclick="exportSingleClient('${client.id}')">📦 Exporter</button>
-                        <button class="btn btn-danger" onclick="confirmDelete('${client.id}')">🗑️ Supprimer</button>
+
+            document.getElementById('welcomeState').style.display = 'none';
+            document.getElementById('mainTitle').textContent = client.nom;
+
+            const detail = document.getElementById('clientDetail');
+            detail.style.display = 'block';
+            detail.innerHTML = `
+                <div class="client-detail">
+                    <div class="detail-card">
+                        <div class="client-header">
+                            <div class="client-header-avatar">${getInitials(client.nom)}</div>
+                            <div class="client-header-info">
+                                <div class="client-header-name">${escapeHtml(client.nom)}</div>
+                                <div class="client-header-meta">ID: ${client.id} • Ajouté le ${client.dateAjout || '—'}</div>
+                            </div>
+                            <div class="client-header-actions">
+                                <button class="btn btn-secondary" onclick="openEditForm('${client.id}')">✏️ Modifier</button>
+                                <button class="btn btn-secondary" onclick="exportSingleClient('${client.id}')">📦</button>
+                                <button class="btn btn-danger btn-icon" onclick="confirmDelete('${client.id}')">🗑️</button>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div class="client-info"><strong>📧 Email :</strong> ${client.email || '—'}</div>
-                <div class="client-info"><strong>📱 Téléphone :</strong> ${client.telephone || '—'}</div>
-                <div class="client-info"><strong>📅 Ajouté le :</strong> ${client.dateAjout || '—'}</div>
-                <div class="client-info"><strong>🆔 ID :</strong> <code>${client.id}</code></div>
-                ${client.notes ? `<div class="client-notes"><div class="notes-label">📝 Notes</div><div class="notes-content">${escapeHtml(client.notes)}</div></div>` : ''}
-                <div class="files-section">
-                    <div class="files-header"><div class="files-title">Fichiers attachés</div></div>
-                    <div class="file-upload-zone" id="uploadZone" ondrop="handleDrop(event, '${client.id}')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" onclick="document.getElementById('fileInput').click()">
-                        <div class="upload-icon">📁</div>
-                        <div class="upload-text">Glissez-déposez des fichiers ici</div>
-                        <div class="upload-hint">ou cliquez pour parcourir</div>
-                        <input type="file" id="fileInput" multiple style="display: none;" onchange="uploadFiles(event, '${client.id}')">
+                    <div class="detail-card">
+                        <div class="detail-card-header">
+                            <div class="detail-card-title">📋 Informations</div>
+                        </div>
+                        <div class="detail-card-body">
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <div class="info-label">📧 Email</div>
+                                    <div class="info-value ${!client.email ? 'empty' : ''}">${client.email || 'Non renseigné'}</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label">📱 Téléphone</div>
+                                    <div class="info-value ${!client.telephone ? 'empty' : ''}">${client.telephone || 'Non renseigné'}</div>
+                                </div>
+                            </div>
+                            ${client.notes ? `
+                                <div style="margin-top:20px;">
+                                    <div class="info-label" style="margin-bottom:10px;">📝 Notes</div>
+                                    <div class="notes-content">${escapeHtml(client.notes)}</div>
+                                </div>
+                            ` : ''}
+                        </div>
                     </div>
-                    <div id="filesList" class="files-list"><div class="no-files">Chargement...</div></div>
+                    <div class="detail-card">
+                        <div class="detail-card-header">
+                            <div class="detail-card-title">📁 Fichiers</div>
+                        </div>
+                        <div class="detail-card-body">
+                            <div class="upload-zone" id="uploadZone" ondrop="handleFileDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" onclick="triggerFileInput()">
+                                <div class="upload-zone-icon">📤</div>
+                                <div class="upload-zone-text">Glissez-déposez vos fichiers ici</div>
+                                <div class="upload-zone-hint">ou cliquez pour parcourir</div>
+                            </div>
+                            <input type="file" id="fileInput" multiple style="display:none;" onchange="handleFileSelect(this)">
+                            <div id="filesList" class="files-grid"></div>
+                        </div>
+                    </div>
                 </div>
             `;
-            details.classList.add('show');
             loadClientFiles(clientId);
         }
 
@@ -547,65 +1064,118 @@
                 const data = await response.json();
                 const container = document.getElementById('filesList');
                 if (!data.files || data.files.length === 0) {
-                    container.innerHTML = '<div class="no-files">Aucun fichier</div>';
+                    container.innerHTML = '<div class="no-files">📭 Aucun fichier</div>';
                     return;
                 }
-                container.innerHTML = data.files.map(file => `
-                    <div class="file-item">
+                container.innerHTML = data.files.map(f => `
+                    <div class="file-card">
+                        <div class="file-icon">${getFileIcon(f.originalname)}</div>
                         <div class="file-info">
-                            <span class="file-icon">${getFileIcon(file.originalname)}</span>
-                            <span class="file-name">${file.originalname}</span>
-                            <span class="file-size">${formatFileSize(file.size)}</span>
+                            <div class="file-name">${f.originalname}</div>
+                            <div class="file-size">${formatFileSize(f.size)}</div>
                         </div>
                         <div class="file-actions">
-                            <a href="${file.path}" target="_blank" class="btn btn-secondary file-btn">👁️</a>
-                            <a href="${file.path}" download class="btn btn-secondary file-btn">⬇️</a>
-                            <button class="btn btn-danger file-btn" onclick="deleteFile('${clientId}', '${file.filename}')">🗑️</button>
+                            <a href="${f.path}" target="_blank" class="file-btn" title="Voir">👁️</a>
+                            <a href="${f.path}" download class="file-btn" title="Télécharger">⬇️</a>
+                            <button class="file-btn danger" onclick="deleteFile('${clientId}','${f.filename}')" title="Supprimer">🗑️</button>
                         </div>
                     </div>
                 `).join('');
-            } catch (error) { document.getElementById('filesList').innerHTML = '<div class="no-files">Erreur</div>'; }
+            } catch (e) { document.getElementById('filesList').innerHTML = '<div class="no-files">Erreur</div>'; }
         }
 
         function getFileIcon(filename) {
             const ext = filename.split('.').pop().toLowerCase();
-            const icons = { pdf:'📕', doc:'📘', docx:'📘', xls:'📗', xlsx:'📗', ppt:'📙', pptx:'📙', txt:'📄', jpg:'🖼️', jpeg:'🖼️', png:'🖼️', gif:'🖼️', mp3:'🎵', mp4:'🎬', zip:'📦', rar:'📦', js:'💻', py:'🐍', html:'🌐', css:'🎨', json:'📋' };
+            const icons = {pdf:'📕',doc:'📘',docx:'📘',xls:'📗',xlsx:'📗',ppt:'📙',pptx:'📙',txt:'📄',jpg:'🖼️',jpeg:'🖼️',png:'🖼️',gif:'🖼️',mp3:'🎵',mp4:'🎬',zip:'📦',rar:'📦',js:'💻',py:'🐍',html:'🌐',css:'🎨',json:'📋'};
             return icons[ext] || '📎';
         }
 
         function formatFileSize(bytes) {
             if (bytes === 0) return '0 B';
-            const k = 1024, sizes = ['B', 'KB', 'MB', 'GB'];
+            const k = 1024, sizes = ['B','KB','MB','GB'];
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
         }
 
         function handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('dragover'); }
         function handleDragLeave(e) { e.currentTarget.classList.remove('dragover'); }
-        async function handleDrop(e, clientId) { e.preventDefault(); e.currentTarget.classList.remove('dragover'); if (e.dataTransfer.files.length > 0) await uploadFilesArray(e.dataTransfer.files, clientId); }
-        async function uploadFiles(e, clientId) { if (e.target.files.length > 0) await uploadFilesArray(e.target.files, clientId); }
+        
+        function handleFileDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+            if(e.dataTransfer.files.length > 0 && selectedClientId) {
+                uploadFilesArray(e.dataTransfer.files, selectedClientId);
+            }
+        }
+        
+        function triggerFileInput() {
+            document.getElementById('fileInput').click();
+        }
+        
+        function handleFileSelect(input) {
+            if(input.files && input.files.length > 0 && selectedClientId) {
+                uploadFilesArray(input.files, selectedClientId);
+                input.value = ''; // Reset pour permettre de re-sélectionner le même fichier
+            }
+        }
 
         async function uploadFilesArray(files, clientId) {
             const formData = new FormData();
-            for (let file of files) formData.append('files', file);
+            for(let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
             try {
-                showStatus('⏳ Upload en cours...', false);
-                const response = await fetch(`${FILES_API_URL}/${clientId}`, { method: 'POST', body: formData });
-                if (response.ok) { showStatus(`✅ ${files.length} fichier(s) uploadé(s)`); loadClientFiles(clientId); }
-                else throw new Error('Erreur');
-            } catch (error) { showStatus('❌ Erreur upload', true); }
+                showStatus('Upload en cours...', false);
+                const response = await fetch(`${FILES_API_URL}/${clientId}`, { method:'POST', body:formData });
+                if(response.ok) { 
+                    showStatus(`${files.length} fichier(s) uploadé(s)`); 
+                    loadClientFiles(clientId); 
+                } else {
+                    showStatus('Erreur serveur lors de l\'upload', true);
+                }
+            } catch(e) { 
+                console.error('Erreur upload:', e);
+                showStatus('Erreur upload', true); 
+            }
         }
 
         async function deleteFile(clientId, filename) {
-            if (!confirm('Supprimer ce fichier ?')) return;
+            if(!confirm('Supprimer ce fichier ?')) return;
             try {
-                const response = await fetch(`${FILES_API_URL}/${clientId}/${filename}`, { method: 'DELETE' });
-                if (response.ok) { showStatus('✅ Fichier supprimé'); loadClientFiles(clientId); }
-            } catch (error) { showStatus('❌ Erreur', true); }
+                const response = await fetch(`${FILES_API_URL}/${clientId}/${filename}`, { method:'DELETE' });
+                if(response.ok) { showStatus('Fichier supprimé'); loadClientFiles(clientId); }
+            } catch(e) { showStatus('Erreur', true); }
         }
 
-        document.getElementById('clientForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
+        // Form functions
+        function openAddForm() {
+            document.getElementById('formTitle').textContent = 'Nouveau client';
+            document.getElementById('editingId').value = '';
+            document.getElementById('clientForm').reset();
+            document.getElementById('formPanel').classList.add('open');
+            document.getElementById('formOverlay').classList.add('open');
+        }
+
+        function openEditForm(clientId) {
+            const client = clients.find(c => c.id === clientId);
+            if(!client) return;
+            document.getElementById('formTitle').textContent = 'Modifier le client';
+            document.getElementById('editingId').value = clientId;
+            document.getElementById('nom').value = client.nom;
+            document.getElementById('email').value = client.email || '';
+            document.getElementById('telephone').value = client.telephone || '';
+            document.getElementById('notes').value = client.notes || '';
+            document.getElementById('formPanel').classList.add('open');
+            document.getElementById('formOverlay').classList.add('open');
+        }
+
+        function closeForm() {
+            document.getElementById('formPanel').classList.remove('open');
+            document.getElementById('formOverlay').classList.remove('open');
+        }
+
+        async function submitForm() {
+            const editingId = document.getElementById('editingId').value;
             const client = {
                 nom: document.getElementById('nom').value.trim(),
                 email: document.getElementById('email').value.trim(),
@@ -613,49 +1183,24 @@
                 notes: document.getElementById('notes').value.trim(),
                 dateAjout: new Date().toLocaleDateString('fr-FR')
             };
+            if(!client.nom) { showStatus('Le nom est requis', true); return; }
             try {
-                const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(client) });
-                if (response.ok) { showStatus('✅ Client ajouté'); resetForm(); loadClients(); }
-            } catch (error) { showStatus('❌ Erreur', true); }
-        });
-
-        function resetForm() { document.getElementById('clientForm').reset(); }
-
-        function editClient(clientId) {
-            const client = clients.find(c => c.id === clientId);
-            if (!client) return;
-            const details = document.getElementById('clientDetails');
-            details.innerHTML = `
-                <div class="detail-header"><div class="detail-title">Modifier : ${client.nom}</div></div>
-                <form class="edit-form" onsubmit="saveClient(event, '${clientId}')">
-                    <div class="form-row">
-                        <div class="form-group"><label>👤 Nom *</label><input type="text" id="editNom" value="${escapeHtml(client.nom)}" required></div>
-                        <div class="form-group"><label>📧 Email</label><input type="email" id="editEmail" value="${escapeHtml(client.email || '')}"></div>
-                        <div class="form-group"><label>📱 Téléphone</label><input type="tel" id="editTelephone" value="${escapeHtml(client.telephone || '')}"></div>
-                    </div>
-                    <div class="form-group"><label>📝 Notes</label><textarea id="editNotes">${escapeHtml(client.notes || '')}</textarea></div>
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-secondary" onclick="selectClient('${clientId}')">❌ Annuler</button>
-                        <button type="submit" class="btn">💾 Enregistrer</button>
-                    </div>
-                </form>
-            `;
+                let response;
+                if(editingId) {
+                    response = await fetch(`${API_URL}/${editingId}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(client) });
+                } else {
+                    response = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(client) });
+                }
+                if(response.ok) {
+                    showStatus(editingId ? 'Client modifié' : 'Client ajouté');
+                    closeForm();
+                    loadClients();
+                    if(editingId) setTimeout(() => selectClient(editingId), 100);
+                }
+            } catch(e) { showStatus('Erreur', true); }
         }
 
-        async function saveClient(e, clientId) {
-            e.preventDefault();
-            const client = {
-                nom: document.getElementById('editNom').value.trim(),
-                email: document.getElementById('editEmail').value.trim(),
-                telephone: document.getElementById('editTelephone').value.trim(),
-                notes: document.getElementById('editNotes').value.trim()
-            };
-            try {
-                const response = await fetch(`${API_URL}/${clientId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(client) });
-                if (response.ok) { showStatus('✅ Client modifié'); loadClients(); setTimeout(() => selectClient(clientId), 100); }
-            } catch (error) { showStatus('❌ Erreur', true); }
-        }
-
+        // Delete
         function confirmDelete(clientId) {
             const client = clients.find(c => c.id === clientId);
             pendingAction = () => deleteClient(clientId);
@@ -664,24 +1209,25 @@
         }
 
         function closeConfirmModal() { document.getElementById('confirmModal').classList.remove('show'); pendingAction = null; }
-        function confirmAction() { if (pendingAction) { pendingAction(); closeConfirmModal(); } }
+        function confirmAction() { if(pendingAction) { pendingAction(); closeConfirmModal(); } }
 
         async function deleteClient(clientId) {
             try {
-                const response = await fetch(`${API_URL}/${clientId}`, { method: 'DELETE' });
-                if (response.ok) { showStatus('✅ Client supprimé'); document.getElementById('clientDetails').classList.remove('show'); selectedClientId = null; loadClients(); }
-            } catch (error) { showStatus('❌ Erreur', true); }
+                const response = await fetch(`${API_URL}/${clientId}`, { method:'DELETE' });
+                if(response.ok) {
+                    showStatus('Client supprimé');
+                    selectedClientId = null;
+                    document.getElementById('clientDetail').style.display = 'none';
+                    document.getElementById('welcomeState').style.display = 'flex';
+                    document.getElementById('mainTitle').textContent = 'Tableau de bord';
+                    loadClients();
+                }
+            } catch(e) { showStatus('Erreur', true); }
         }
 
-        function escapeHtml(text) { if (!text) return ''; const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
-
-        function showStatus(message, isError = false) {
-            const status = document.getElementById('statusMessage');
-            status.textContent = message;
-            status.className = `status-message ${isError ? 'status-error' : 'status-success'}`;
-            status.style.display = 'block';
-            setTimeout(() => { status.style.display = 'none'; }, 4000);
-        }
+        // Export
+        function showExportMenu() { document.getElementById('exportModal').classList.add('show'); }
+        function closeExportMenu() { document.getElementById('exportModal').classList.remove('show'); }
 
         async function exportData(format) {
             try {
@@ -694,118 +1240,114 @@
                         mimeType = 'application/json';
                         break;
                     case 'csv':
-                        const headers = ['Nom', 'Email', 'Téléphone', 'Notes', 'Date Ajout', 'ID'];
-                        const rows = clients.map(c => [escapeCsv(c.nom), escapeCsv(c.email), escapeCsv(c.telephone), escapeCsv(c.notes), escapeCsv(c.dateAjout), c.id]);
+                        const headers = ['Nom','Email','Téléphone','Notes','Date Ajout','ID'];
+                        const rows = clients.map(c => [escapeCsv(c.nom),escapeCsv(c.email),escapeCsv(c.telephone),escapeCsv(c.notes),escapeCsv(c.dateAjout),c.id]);
                         content = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
                         filename = `clients-${date}.csv`;
                         mimeType = 'text/csv;charset=utf-8;';
                         break;
                     case 'txt':
-                        content = clients.map(c => `═══════════════════════════════════════\n👤 ${c.nom}\n📧 ${c.email || '—'}\n📱 ${c.telephone || '—'}\n📅 ${c.dateAjout || '—'}\n${c.notes ? '📝 ' + c.notes + '\n' : ''}═══════════════════════════════════════`).join('\n\n');
+                        content = clients.map(c => `═══════════════════════════════════════\n👤 ${c.nom}\n📧 ${c.email||'—'}\n📱 ${c.telephone||'—'}\n📅 ${c.dateAjout||'—'}\n${c.notes?'📝 '+c.notes+'\n':''}═══════════════════════════════════════`).join('\n\n');
                         filename = `clients-${date}.txt`;
                         mimeType = 'text/plain;charset=utf-8;';
                         break;
                     case 'html':
-                        content = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Export Clients</title><style>body{font-family:system-ui;background:#0d1117;color:#e6edf3;padding:40px}h1{color:#3fb950}.client{background:#161b22;padding:20px;margin:15px 0;border-radius:8px;border:1px solid #30363d}.client h2{color:#56d4dd;margin:0 0 10px 0}.label{color:#8b949e}</style></head><body><h1>📋 Liste des Clients</h1><p>Export du ${new Date().toLocaleString('fr-FR')}</p>${clients.map(c => `<div class="client"><h2>${escapeHtml(c.nom)}</h2><div><span class="label">📧 Email:</span> ${escapeHtml(c.email) || '—'}</div><div><span class="label">📱 Tél:</span> ${escapeHtml(c.telephone) || '—'}</div><div><span class="label">📅 Ajouté:</span> ${c.dateAjout || '—'}</div>${c.notes ? '<div><span class="label">📝 Notes:</span><br>' + escapeHtml(c.notes) + '</div>' : ''}</div>`).join('')}</body></html>`;
+                        content = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Export Clients</title><style>body{font-family:system-ui;background:#0d1117;color:#e6edf3;padding:40px}h1{color:#3fb950}.client{background:#161b22;padding:20px;margin:15px 0;border-radius:8px;border:1px solid #30363d}.client h2{color:#56d4dd;margin:0 0 10px 0}.label{color:#8b949e}</style></head><body><h1>📋 Clients</h1><p>Export: ${new Date().toLocaleString('fr-FR')}</p>${clients.map(c => `<div class="client"><h2>${escapeHtml(c.nom)}</h2><div><span class="label">📧</span> ${escapeHtml(c.email)||'—'}</div><div><span class="label">📱</span> ${escapeHtml(c.telephone)||'—'}</div><div><span class="label">📅</span> ${c.dateAjout||'—'}</div>${c.notes?'<div><span class="label">📝</span><br>'+escapeHtml(c.notes)+'</div>':''}</div>`).join('')}</body></html>`;
                         filename = `clients-${date}.html`;
                         mimeType = 'text/html;charset=utf-8;';
                         break;
                 }
-                const blob = new Blob([content], { type: mimeType });
-                const url = window.URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = filename;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                window.URL.revokeObjectURL(url);
-                showStatus(`✅ Export ${format.toUpperCase()} réussi !`);
-            } catch (error) { showStatus('❌ Erreur export', true); }
+                downloadBlob(new Blob([content], {type:mimeType}), filename);
+                showStatus(`Export ${format.toUpperCase()} réussi`);
+            } catch(e) { showStatus('Erreur export', true); }
         }
 
         function escapeCsv(str) {
-            if (str === null || str === undefined) return '';
+            if(str === null || str === undefined) return '';
             str = String(str);
-            if (str.includes(',') || str.includes('"') || str.includes('\n')) return '"' + str.replace(/"/g, '""') + '"';
+            if(str.includes(',') || str.includes('"') || str.includes('\n')) return '"' + str.replace(/"/g,'""') + '"';
             return str;
         }
 
         async function exportDataWithFiles() {
             try {
-                showStatus('⏳ Préparation export...', false);
-                const response = await fetch('/export-all', { method: 'GET', headers: { 'Accept': 'application/zip' } });
-                if (!response.ok) throw new Error(`Erreur ${response.status}`);
+                showStatus('Préparation...', false);
+                const response = await fetch('/export-all', { headers:{'Accept':'application/zip'} });
+                if(!response.ok) throw new Error('Erreur');
                 const blob = await response.blob();
-                if (blob.size < 1000) throw new Error('ZIP invalide');
-                const url = window.URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `export-complet-clients-${new Date().toISOString().split('T')[0]}.zip`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                window.URL.revokeObjectURL(url);
-                showStatus(`✅ Export complet réussi !`);
-            } catch (error) { showStatus(`❌ Erreur: ${error.message}`, true); }
+                downloadBlob(blob, `export-complet-${new Date().toISOString().split('T')[0]}.zip`);
+                showStatus('Export complet réussi');
+            } catch(e) { showStatus('Erreur export', true); }
         }
 
         window.exportSingleClient = async function(clientId) {
             try {
-                showStatus('⏳ Export en cours...', false);
-                const response = await fetch(`${API_URL}/${clientId}`);
-                const client = await response.json();
+                showStatus('Export...', false);
+                const client = clients.find(c => c.id === clientId);
                 const zip = new JSZip();
                 const date = new Date().toISOString().split('T')[0];
-                const safeName = client.nom.replace(/[<>:"/\\|?*]/g, '_').replace(/\s+/g, '_');
+                const safeName = client.nom.replace(/[<>:"/\\|?*]/g,'_').replace(/\s+/g,'_');
                 zip.file('client.json', JSON.stringify(client, null, 2));
-                zip.file('client.txt', `FICHE CLIENT\n═══════════════════════════════════════\n👤 ${client.nom}\n📧 ${client.email || '—'}\n📱 ${client.telephone || '—'}\n📅 ${client.dateAjout || '—'}\n🆔 ${client.id}\n${client.notes ? '\n📝 Notes:\n' + client.notes : ''}`);
+                zip.file('client.txt', `FICHE CLIENT\n═══════════════════════════════════════\n👤 ${client.nom}\n📧 ${client.email||'—'}\n📱 ${client.telephone||'—'}\n📅 ${client.dateAjout||'—'}\n🆔 ${client.id}\n${client.notes?'\n📝 Notes:\n'+client.notes:''}`);
                 let totalFiles = 0;
                 try {
                     const filesResponse = await fetch(`${FILES_API_URL}/${client.id}`);
-                    if (filesResponse.ok) {
+                    if(filesResponse.ok) {
                         const filesData = await filesResponse.json();
-                        if (filesData.files && filesData.files.length > 0) {
-                            const filesFolder = zip.folder('fichiers');
-                            for (const file of filesData.files) {
+                        if(filesData.files && filesData.files.length > 0) {
+                            const folder = zip.folder('fichiers');
+                            for(const f of filesData.files) {
                                 try {
-                                    const fileResponse = await fetch(file.path);
-                                    if (fileResponse.ok) { filesFolder.file(file.originalname, await fileResponse.blob()); totalFiles++; }
-                                } catch (e) {}
+                                    const r = await fetch(f.path);
+                                    if(r.ok) { folder.file(f.originalname, await r.blob()); totalFiles++; }
+                                } catch(e) {}
                             }
                         }
                     }
-                } catch (e) {}
-                const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 9 } });
-                const url = window.URL.createObjectURL(zipBlob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `${safeName}-${date}.zip`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                window.URL.revokeObjectURL(url);
-                showStatus(`✅ Export: ${client.nom} + ${totalFiles} fichier(s)`);
-            } catch (error) { showStatus('❌ Erreur export', true); }
+                } catch(e) {}
+                const zipBlob = await zip.generateAsync({ type:'blob', compression:'DEFLATE', compressionOptions:{level:9} });
+                downloadBlob(zipBlob, `${safeName}-${date}.zip`);
+                showStatus(`Export: ${client.nom} + ${totalFiles} fichier(s)`);
+            } catch(e) { showStatus('Erreur', true); }
+        }
+
+        function downloadBlob(blob, filename) {
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
         }
 
         async function importData(event) {
             const file = event.target.files[0];
-            if (!file) return;
+            if(!file) return;
             try {
                 const imported = JSON.parse(await file.text());
-                if (!Array.isArray(imported)) throw new Error('Format invalide');
+                if(!Array.isArray(imported)) throw new Error('Format invalide');
                 let count = 0;
-                for (const client of imported) {
-                    if (client.nom) {
-                        await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nom: client.nom, email: client.email || '', telephone: client.telephone || '', notes: client.notes || '', dateAjout: client.dateAjout || new Date().toLocaleDateString('fr-FR') }) });
+                for(const c of imported) {
+                    if(c.nom) {
+                        await fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({nom:c.nom,email:c.email||'',telephone:c.telephone||'',notes:c.notes||'',dateAjout:c.dateAjout||new Date().toLocaleDateString('fr-FR')}) });
                         count++;
                     }
                 }
-                showStatus(`✅ ${count} client(s) importé(s)`);
+                showStatus(`${count} client(s) importé(s)`);
                 loadClients();
-            } catch (error) { showStatus('❌ Erreur import', true); }
+            } catch(e) { showStatus('Erreur import', true); }
             event.target.value = '';
+        }
+
+        function escapeHtml(text) { if(!text) return ''; const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
+
+        function showStatus(message, isError = false) {
+            const toast = document.getElementById('statusToast');
+            toast.textContent = (isError ? '❌ ' : '✅ ') + message;
+            toast.className = `status-toast ${isError ? 'error' : 'success'} show`;
+            setTimeout(() => { toast.classList.remove('show'); }, 3500);
         }
     </script>
 </body>

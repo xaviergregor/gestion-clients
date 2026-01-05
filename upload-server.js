@@ -44,7 +44,7 @@ const upload = multer({
     }
 });
 
-// Route pour uploader un fichier
+// Route pour uploader un fichier (single)
 app.post('/upload/:clientId', upload.single('file'), (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: 'Aucun fichier uploadé' });
@@ -57,6 +57,28 @@ app.post('/upload/:clientId', upload.single('file'), (req, res) => {
         size: req.file.size,
         mimetype: req.file.mimetype,
         path: `/uploads/${req.params.clientId}/${req.file.filename}`
+    });
+});
+
+// Route pour uploader plusieurs fichiers via /files (utilisé par le frontend)
+app.post('/files/:clientId', upload.array('files', 20), (req, res) => {
+    if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ error: 'Aucun fichier uploadé' });
+    }
+    
+    const uploadedFiles = req.files.map(file => ({
+        success: true,
+        filename: file.filename,
+        originalname: file.originalname,
+        size: file.size,
+        mimetype: file.mimetype,
+        path: `/uploads/${req.params.clientId}/${file.filename}`
+    }));
+    
+    res.json({
+        success: true,
+        count: req.files.length,
+        files: uploadedFiles
     });
 });
 
