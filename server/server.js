@@ -13,6 +13,8 @@ const QR = require("qrcode");
 const fs = require("fs");
 const fsp = require("fs/promises");
 const path = require("path");
+const { execFile } = require("child_process");
+let sharp = null; try { sharp = require("sharp"); sharp.cache(false); sharp.concurrency(1); } catch {}
 
 // ─────────────────────────── Configuration ───────────────────────────
 const PORT = Number(process.env.PORT || 3000);
@@ -29,13 +31,14 @@ const DB_FILE = path.join(DATA_DIR, "db.json");
 const USERS_FILE = path.join(DATA_DIR, "users.json");
 const UPLOADS_DIR = path.join(DATA_DIR, "uploads");
 const BACKUP_DIR = path.join(DATA_DIR, "backups");
+const THUMBS_DIR = path.join(DATA_DIR, "cache", "thumbs");   // régénérable, exclu des sauvegardes
 const LOG_FILE = path.join(DATA_DIR, "audit.log");
 
 if (!SECRET || SECRET.length < 32) {
   console.error("[ERREUR] SECRET_KEY manquante ou trop courte (≥32 car.) — openssl rand -hex 32");
   process.exit(1);
 }
-for (const d of [DATA_DIR, UPLOADS_DIR, BACKUP_DIR]) fs.mkdirSync(d, { recursive: true });
+for (const d of [DATA_DIR, UPLOADS_DIR, BACKUP_DIR, THUMBS_DIR]) fs.mkdirSync(d, { recursive: true });
 
 const log = (level, msg) => {
   const line = `${new Date().toISOString()} ${level} ${msg}`;
@@ -111,7 +114,7 @@ const canSeeClient = (user, id) => user.role === "admin" || user.clientScope ===
 const effPerms = (user) => user.role === "admin" ? FULL : normPerms(user.perms);
 function publicUser(u) {
   return { username: u.username, role: u.role, displayName: u.displayName || u.username, perms: effPerms(u),
-    clientScope: u.role === "admin" ? "all" : (u.clientScope ?? "all"), twofa: !!u.totpEnabled, require2fa: !!u.require2fa, createdAt: u.createdAt };
+    clientScope: u.role === "admin" ? "all" : (u.clientScope ?? "all"), twofa: !!u.totpEnabled, require2fa: !!u.require2fa, createdAt: u.createdAt, pins: Array.isArray(u.pins) ? u.pins : [] };
 }
 
 // ─────────────────────────── Sessions (cookie signé HMAC) ───────────────────────────
@@ -247,6 +250,16 @@ app.post("/api/login/2fa", (req, res) => {
 
 app.post("/api/logout", (req, res) => { clearSession(res); res.json({ ok: true }); });
 app.get("/api/me", auth, (req, res) => res.json({ user: publicUser(req.user) }));
+// Épingles : propres à chaque compte, ne modifient pas les fiches clients
+app.put("/api/me/pins/:id", auth, (req, res) => {
+  const id = String(req.params.id);
+  if (!canSeeClient(req.user, id) || !readDB().clients.some((c) => c.id === id)) return res.status(404).json({ error: "Client introuvable" });
+  const us = readUsers(); const u = us.users.find((x) => x.username === req.user.username);
+  const pins = new Set(Array.isArray(u.pins) ? u.pins : []);
+  if (req.body?.pinned === false) pins.delete(id); else pins.add(id);
+  u.pins = [...pins].slice(-200); writeUsers(us);
+  res.json({ pins: u.pins });
+});
 
 // ── 2FA : enrôlement (pré-session pendant login imposé, ou session normale) ──
 async function startEnroll(username) {
@@ -333,6 +346,8 @@ function clientForUser(user, c) {
   out.notesHidden = !p["notes.view"] && !!c.notes;
   if (p["secrets.view"]) out.credentials = (c.credentials || []).map(({ secret, ...rest }) => ({ ...rest, hasPassword: !!secret }));
   else { out.credentials = undefined; out.secretsHidden = (c.credentials || []).length; }
+  // noms des pièces jointes (tri « plus de fichiers » + recherche) — seulement si droit de voir les fichiers
+  if (p["files.view"]) { let names = []; try { names = fs.readdirSync(path.join(UPLOADS_DIR, c.id)); } catch {} out.fileNames = names.map(originalName); }
   return out;
 }
 
@@ -374,8 +389,12 @@ app.delete("/api/clients/:id", auth, need("clients.edit"), async (req, res) => {
   if (db.clients.length === before) return res.status(404).json({ error: "Client introuvable" });
   writeDB(db);
   await fsp.rm(path.join(UPLOADS_DIR, req.params.id), { recursive: true, force: true }).catch(() => {});
+  await fsp.rm(path.join(THUMBS_DIR, req.params.id), { recursive: true, force: true }).catch(() => {});
   const us = readUsers(); let ch = false;
-  for (const u of us.users) if (Array.isArray(u.clientScope)) { const n = u.clientScope.filter((i) => i !== req.params.id); if (n.length !== u.clientScope.length) { u.clientScope = n; ch = true; } }
+  for (const u of us.users) {
+    if (Array.isArray(u.clientScope)) { const n = u.clientScope.filter((i) => i !== req.params.id); if (n.length !== u.clientScope.length) { u.clientScope = n; ch = true; } }
+    if (Array.isArray(u.pins) && u.pins.includes(req.params.id)) { u.pins = u.pins.filter((i) => i !== req.params.id); ch = true; }
+  }
   if (ch) writeUsers(us);
   log("INFO", `CLIENT DELETE id=${req.params.id} by=${req.user.username}`);
   res.json({ ok: true });
@@ -422,6 +441,42 @@ app.get("/api/clients/:id/files/:filename", auth, fileGuard("files.view"), (req,
     "Content-Disposition": `${asDownload ? "attachment" : "inline"}; filename*=UTF-8''${encodeURIComponent(originalName(fn))}` });
   res.sendFile(file);
 });
+// ── Vignettes (images via sharp, PDF page 1 via pdftoppm) — cache WebP dans data/cache/thumbs ──
+const THUMB_PX = 480;
+const THUMB_IMG = new Set(["jpg", "jpeg", "png", "gif", "webp", "avif", "tif", "tiff", "heic", "heif"]);
+const thumbKind = (name) => { const ext = (name.split(".").pop() || "").toLowerCase(); return THUMB_IMG.has(ext) ? "img" : ext === "pdf" ? "pdf" : null; };
+const thumbJobs = new Map(); const thumbFailed = new Set(); let thumbActive = 0; const thumbQueue = [];
+const thumbSlot = () => new Promise((r) => { if (thumbActive < 2) { thumbActive++; r(); } else thumbQueue.push(r); });
+const thumbFree = () => { const n = thumbQueue.shift(); if (n) n(); else thumbActive--; };
+const pdfFirstPage = (src) => new Promise((resolve, reject) =>
+  execFile("pdftoppm", ["-f", "1", "-l", "1", "-singlefile", "-png", "-scale-to", String(THUMB_PX * 2), src],
+    { encoding: "buffer", maxBuffer: 32 * 1024 * 1024, timeout: 20000 }, (e, out) => e ? reject(e) : resolve(out)));
+async function makeThumb(src, dst, kind) {
+  await thumbSlot();
+  try {
+    const input = kind === "pdf" ? await pdfFirstPage(src) : src;
+    await fsp.mkdir(path.dirname(dst), { recursive: true });
+    const tmp = `${dst}.${process.pid}.tmp`;
+    await sharp(input, { failOn: "none", limitInputPixels: 100e6, pages: 1 }).rotate()
+      .resize(THUMB_PX, THUMB_PX, { fit: "inside", withoutEnlargement: true })
+      .flatten({ background: "#ffffff" }).webp({ quality: 72 }).toFile(tmp);
+    await fsp.rename(tmp, dst);
+  } finally { thumbFree(); }
+}
+app.get("/api/clients/:id/files/:filename/thumb", auth, fileGuard("files.view"), async (req, res) => {
+  const fn = path.basename(req.params.filename); const kind = thumbKind(originalName(fn));
+  if (!sharp || !kind) return res.status(404).end();
+  let src; try { src = path.join(clientDir(req.params.id), fn); } catch { return res.status(400).end(); }
+  if (!fs.existsSync(src)) return res.status(404).end();
+  const dst = path.join(THUMBS_DIR, req.params.id, fn + ".webp");
+  if (!fs.existsSync(dst)) {
+    if (thumbFailed.has(dst)) return res.status(415).end();
+    if (!thumbJobs.has(dst)) thumbJobs.set(dst, makeThumb(src, dst, kind).finally(() => thumbJobs.delete(dst)));
+    try { await thumbJobs.get(dst); } catch (e) { thumbFailed.add(dst); log("WARN", `THUMB ${fn}: ${String(e.message || e).split("\n")[0]}`); return res.status(415).end(); }
+  }
+  res.set({ "Content-Type": "image/webp", "Cache-Control": "private, max-age=604800, immutable", "X-Content-Type-Options": "nosniff" });
+  res.sendFile(dst);
+});
 app.post("/api/clients/:id/files", auth, fileGuard("files.edit"), (req, res) => {
   upload.array("files", 20)(req, res, (err) => {
     if (err) return res.status(err.code === "LIMIT_FILE_SIZE" ? 413 : 400).json({ error: err.code === "LIMIT_FILE_SIZE" ? `Fichier trop volumineux (max ${MAX_UPLOAD_MB} Mo)` : "Échec de l'upload" });
@@ -434,7 +489,8 @@ app.delete("/api/clients/:id/files/:filename", auth, fileGuard("files.edit"), (r
   const fn = path.basename(req.params.filename);
   let file; try { file = path.join(clientDir(req.params.id), fn); } catch (e) { return res.status(e.status || 400).json({ error: e.message }); }
   if (!fs.existsSync(file)) return res.status(404).json({ error: "Fichier introuvable" });
-  fs.unlinkSync(file); log("INFO", `FILE DELETE client=${req.params.id} by=${req.user.username}`); res.json({ ok: true });
+  fs.unlinkSync(file); fs.rm(path.join(THUMBS_DIR, req.params.id, fn + ".webp"), { force: true }, () => {});
+  log("INFO", `FILE DELETE client=${req.params.id} by=${req.user.username}`); res.json({ ok: true });
 });
 
 // ── Export (périmètre de l'utilisateur ; secrets déchiffrés seulement si droit) ──
@@ -494,7 +550,7 @@ app.post("/api/backup", auth, adminOnly, (req, res) => {
   zip.pipe(res);
 
   // /app/data sauf le dossier des sauvegardes quotidiennes (évite l'imbrication et le gonflement)
-  zip.directory(DATA_DIR, "data", (entry) => (entry.name === "backups" || entry.name.startsWith("backups/")) ? false : entry);
+  zip.directory(DATA_DIR, "data", (entry) => /^(backups|cache)(\/|$)/.test(entry.name) ? false : entry);
   // branding (logos)
   if (fs.existsSync(BRANDING_DIR)) zip.directory(BRANDING_DIR, "branding");
   // fichiers de configuration de l'hôte (montés en lecture seule)

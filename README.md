@@ -110,7 +110,8 @@ data/
 ├── users.json       # comptes (mots de passe bcrypt, secret TOTP chiffré)
 ├── audit.log        # journal
 ├── backups/AAAA-MM-JJ/   # copie quotidienne, 30 jours
-└── uploads/<id>/    # fichiers joints
+├── uploads/<id>/    # fichiers joints
+└── cache/thumbs/    # vignettes (régénérées à la demande, exclues des sauvegardes)
 ```
 
 Sauvegarder `data/` régulièrement (hors de la VM). Les champs sensibles y sont déjà chiffrés, mais `ENCRYPTION_KEY` est nécessaire pour les relire : garder la clé séparément de la sauvegarde.

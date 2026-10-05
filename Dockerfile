@@ -1,6 +1,6 @@
 FROM node:24-alpine
 ENV NODE_ENV=production
-RUN apk add --no-cache tzdata
+RUN apk add --no-cache tzdata poppler-utils
 ENV TZ=Europe/Paris
 WORKDIR /app
 COPY server/package.json server/package-lock.json ./

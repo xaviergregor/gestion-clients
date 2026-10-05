@@ -7,6 +7,8 @@ const ICON = {
   users:   I('<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M16 3.5a4 4 0 0 1 0 9M22 21a7 7 0 0 0-4-6.3"/>'),
   user:    I('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'),
   plus:    I('<path d="M12 5v14M5 12h14"/>'),
+  pin:     I('<path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>'),
+  sort:    I('<path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="M11 4h10"/><path d="M11 8h7"/><path d="M11 12h4"/>'),
   search:  I('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>'),
   edit:    I('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>'),
   trash:   I('<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>'),
@@ -44,6 +46,7 @@ const themeToggle = () =>
 const root = document.getElementById("root");
 let me = null, info = { appName: "Gestion Clients", logo: null, logoDark: null };
 let clients = [], selectedId = null, query = "";
+let sortKey = (() => { try { return localStorage.getItem("gc.sort") || "nom"; } catch { return "nom"; } })();
 let draft = null;   // brouillon du formulaire { credentials, networks, hosts }
 
 /* ═════════ Utilitaires ═════════ */
@@ -58,6 +61,8 @@ function toast(msg, err = false) {
 }
 const fmtSize = (b) => { if (!b) return "0 o"; const k = 1024, u = ["o", "Ko", "Mo", "Go"]; const i = Math.floor(Math.log(b) / Math.log(k)); return `${(b / Math.pow(k, i)).toFixed(i ? 1 : 0)} ${u[i]}`; };
 const fileIcon = (name) => /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(name) ? ICON.image : ICON.file;
+const canThumb = (name) => /\.(jpe?g|png|gif|webp|avif|tiff?|heic|heif|pdf)$/i.test(name);
+const fileExt = (name) => { const m = /\.([a-z0-9]{1,6})$/i.exec(name); return m ? m[1].toUpperCase() : ""; };
 
 /* ═════════ API ═════════ */
 async function api(method, url, body, isForm) {
@@ -163,7 +168,6 @@ async function render2faEnroll(forced) {
 
 async function loadClients() {
   clients = await api("GET", "/api/clients");
-  clients.sort((a, b) => (a.nom || "").localeCompare(b.nom || "", "fr", { sensitivity: "base" }));
 }
 
 /* ═════════ Application ═════════ */
@@ -187,7 +191,8 @@ function renderApp() {
         <div class="sidebar-head">
           <div class="sidebar-top"><span class="sidebar-count"><b id="cCount">${clients.length}</b> client${clients.length > 1 ? "s" : ""} ${scope}</span>
             ${can("clients.edit") ? `<button class="btn btn-primary btn-sm" onclick="openForm()">${ICON.plus}Nouveau</button>` : ""}</div>
-          <div class="search">${ICON.search}<input type="search" id="search" placeholder="Rechercher…" aria-label="Rechercher"></div>
+          <div class="search">${ICON.search}<input type="search" id="search" placeholder="Nom, IP, machine, fichier…  ( / )" aria-label="Rechercher" value="${esc(query)}"></div>
+          <label class="sort">${ICON.sort}<select id="sortSel" aria-label="Trier">${SORTS.filter((o) => !o.perm || can(o.perm)).map((o) => `<option value="${o.k}"${o.k === sortKey ? " selected" : ""}>${o.label}</option>`).join("")}</select></label>
         </div>
         <div class="client-list" id="clientList"></div>
       </aside>
@@ -198,19 +203,92 @@ function renderApp() {
   <div class="panel" id="panel"></div>
   <div id="modalHost"></div>`;
   const s = document.getElementById("search");
-  s.addEventListener("input", () => { query = s.value.trim().toLowerCase(); renderList(); });
+  s.addEventListener("input", () => { query = s.value.trim(); renderList(); });
+  s.addEventListener("keydown", (e) => { if (e.key === "Escape") { s.value = ""; query = ""; renderList(); s.blur(); }
+    if (e.key === "Enter") { const first = document.querySelector("#clientList .client-item"); if (first) first.click(); } });
+  document.getElementById("sortSel").addEventListener("change", (e) => { sortKey = e.target.value; try { localStorage.setItem("gc.sort", sortKey); } catch {} renderList(); });
+  if (!window._slashKey) { window._slashKey = true; document.addEventListener("keydown", (e) => {
+    if (e.key !== "/" || e.ctrlKey || e.metaKey || /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName)) return;
+    const el = document.getElementById("search"); if (el) { e.preventDefault(); el.focus(); el.select(); } }); }
   renderList(); renderDetail();
 }
 
-const filtered = () => !query ? clients : clients.filter((c) => [c.nom, c.email, c.telephone].some((v) => (v || "").toLowerCase().includes(query)));
-function renderList() {
-  const box = document.getElementById("clientList"); const list = filtered();
-  if (!list.length) { box.innerHTML = `<div class="list-empty">${clients.length ? "Aucun résultat" : "Aucun client"}</div>`; return; }
-  box.innerHTML = list.map((c) => `
-    <button class="client-item${c.id === selectedId ? " active" : ""}" onclick="select(${attr(c.id)})">
+/* ═════════ Liste : tri, recherche, épingles ═════════ */
+const SORTS = [
+  { k: "nom", label: "Nom A → Z" }, { k: "nom-desc", label: "Nom Z → A" },
+  { k: "maj", label: "Modifiés récemment" }, { k: "ajout", label: "Ajoutés récemment" },
+  { k: "fichiers", label: "Plus de fichiers", perm: "files.view" }, { k: "acces", label: "Plus d'accès", perm: "secrets.view" },
+  { k: "machines", label: "Plus de machines" },
+];
+const norm = (v) => String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const byName = (a, b) => (a.nom || "").localeCompare(b.nom || "", "fr", { sensitivity: "base", numeric: true });
+const nCount = (c) => ({ fichiers: (c.fileNames || []).length, acces: (c.credentials || []).length, machines: (c.hosts || []).length });
+const SORT_FN = {
+  nom: byName, "nom-desc": (a, b) => byName(b, a),
+  maj: (a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")) || byName(a, b),
+  ajout: (a, b) => String(b.createdAt || b.dateAjout || "").localeCompare(String(a.createdAt || a.dateAjout || "")) || byName(a, b),
+  fichiers: (a, b) => nCount(b).fichiers - nCount(a).fichiers || byName(a, b),
+  acces: (a, b) => nCount(b).acces - nCount(a).acces || byName(a, b),
+  machines: (a, b) => nCount(b).machines - nCount(a).machines || byName(a, b),
+};
+const isPinned = (id) => (me.pins || []).includes(id);
+
+/** Champs indexés : [libellé affiché si la correspondance vient de là, valeur]. */
+function searchFields(c) {
+  const f = [["", c.nom], ["", c.email], ["", c.telephone]];
+  if (c.notes) f.push(["Notes", c.notes]);
+  for (const h of c.hosts || []) f.push(["Machine", [h.hostname, h.ip, h.role, h.os].filter(Boolean).join(" · ")], ["Machine", h.notes]);
+  for (const n of c.networks || []) f.push(["Réseau", [n.label, n.subnet, n.vlan && "VLAN " + n.vlan, n.gateway, n.publicIp, n.dns, n.dhcp].filter(Boolean).join(" · ")], ["Réseau", n.notes]);
+  for (const cr of c.credentials || []) f.push(["Accès", [cr.label, cr.type, cr.host, cr.username, cr.url].filter(Boolean).join(" · ")], ["Accès", cr.notes]);
+  for (const fn of c.fileNames || []) f.push(["Fichier", fn]);
+  return f.filter(([, v]) => v);
+}
+/** Tous les mots doivent apparaître (dans un champ ou un autre). Renvoie null ou le 1er champ « secondaire » qui correspond. */
+function matchClient(c, terms) {
+  const fields = searchFields(c).map(([k, v]) => [k, String(v), norm(v)]);
+  const all = fields.map((x) => x[2]).join("\n");
+  if (!terms.every((t) => all.includes(t))) return null;
+  if (terms.every((t) => fields.slice(0, 3).some((x) => x[2].includes(t)))) return { where: "" };
+  const hit = fields.find((x) => x[0] && terms.some((t) => x[2].includes(t)));
+  return { where: hit ? `${hit[0]} : ${hit[1].replace(/\s+/g, " ").slice(0, 80)}` : "" };
+}
+function listView() {
+  const terms = norm(query).split(/\s+/).filter(Boolean);
+  let rows = clients.map((c) => ({ c, m: terms.length ? matchClient(c, terms) : { where: "" } })).filter((r) => r.m);
+  const fn = SORT_FN[sortKey] || byName;
+  rows.sort((a, b) => fn(a.c, b.c));
+  return { pinned: rows.filter((r) => isPinned(r.c.id)), others: rows.filter((r) => !isPinned(r.c.id)), total: rows.length };
+}
+function sortBadge(c) {
+  const n = nCount(c);
+  if (sortKey === "fichiers") return n.fichiers ? `${n.fichiers} fich.` : "";
+  if (sortKey === "acces") return n.acces ? `${n.acces} accès` : "";
+  if (sortKey === "machines") return n.machines ? `${n.machines} mach.` : "";
+  if (sortKey === "maj" && c.updatedAt) return new Date(c.updatedAt).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
+  if (sortKey === "ajout" && (c.createdAt || c.dateAjout)) return new Date(c.createdAt || c.dateAjout).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "2-digit" });
+  return "";
+}
+function itemHTML({ c, m }) {
+  const pinned = isPinned(c.id), badge = sortBadge(c);
+  return `<div class="client-item${c.id === selectedId ? " active" : ""}" role="button" tabindex="0" onclick="select(${attr(c.id)})" onkeydown="if(event.key==='Enter')select(${attr(c.id)})">
       <span class="avatar">${esc(initials(c.nom))}</span>
-      <span class="ci-body"><span class="ci-name">${esc(c.nom)}</span><span class="ci-sub">${esc(c.email || c.telephone || "—")}</span></span>
-    </button>`).join("");
+      <span class="ci-body"><span class="ci-name">${esc(c.nom)}</span><span class="ci-sub${m.where ? " ci-hit" : ""}">${esc(m.where || c.email || c.telephone || "—")}</span></span>
+      ${badge ? `<span class="ci-badge">${esc(badge)}</span>` : ""}
+      <button class="ci-pin${pinned ? " on" : ""}" title="${pinned ? "Désépingler" : "Épingler en haut de liste"}" aria-label="${pinned ? "Désépingler" : "Épingler"}" onclick="event.stopPropagation();togglePin(${attr(c.id)})">${ICON.pin}</button>
+    </div>`;
+}
+function renderList() {
+  const box = document.getElementById("clientList"); if (!box) return;
+  const { pinned, others, total } = listView();
+  const cnt = document.getElementById("cCount"); if (cnt) cnt.textContent = query ? `${total} / ${clients.length}` : clients.length;
+  if (!total) { box.innerHTML = `<div class="list-empty">${clients.length ? "Aucun résultat" : "Aucun client"}</div>`; return; }
+  box.innerHTML = (pinned.length ? `<div class="list-sep">${ICON.pin} Épinglés</div>${pinned.map(itemHTML).join("")}${others.length ? `<div class="list-sep">Tous les clients</div>` : ""}` : "")
+    + others.map(itemHTML).join("");
+}
+async function togglePin(id) {
+  const on = !isPinned(id);
+  try { const d = await api("PUT", `/api/me/pins/${encodeURIComponent(id)}`, { pinned: on }); me.pins = d.pins; renderList(); if (id === selectedId) renderDetail(); }
+  catch (e) { toast(e.message, true); }
 }
 function select(id) { selectedId = id; renderList(); renderDetail(); }
 
@@ -253,6 +331,7 @@ function renderDetail() {
       <span class="avatar lg">${esc(initials(c.nom))}</span>
       <div class="ident"><h2>${esc(c.nom)}</h2><div class="meta">Ajouté le ${esc(c.dateAjout || "—")}</div></div>
       <div class="detail-actions">
+        <button class="btn btn-sm btn-icon btn-pin${isPinned(c.id) ? " on" : ""}" title="${isPinned(c.id) ? "Désépingler" : "Épingler en haut de liste"}" onclick="togglePin(${attr(c.id)})">${ICON.pin}</button>
         ${can("clients.edit") ? `<button class="btn btn-sm" onclick="openForm(${attr(c.id)})">${ICON.edit}<span class="label">Modifier</span></button>` : ""}
         ${can("export") ? `<button class="btn btn-sm btn-icon" title="Exporter ce client" onclick="exportOne(${attr(c.id)})">${ICON.export}</button>` : ""}
         ${can("clients.edit") ? `<button class="btn btn-sm btn-icon btn-ghost btn-danger" title="Supprimer" onclick="askDelete(${attr(c.id)})">${ICON.trash}</button>` : ""}
@@ -309,11 +388,13 @@ async function loadFiles(id) {
   const box = document.getElementById("files"); if (!box) return;
   try {
     const d = await api("GET", `/api/clients/${encodeURIComponent(id)}/files`);
+    const cl = clients.find((x) => x.id === id); if (cl) { const before = (cl.fileNames || []).length; cl.fileNames = d.files.map((f) => f.originalname); if (before !== cl.fileNames.length) renderList(); }
     if (!d.files.length) { box.innerHTML = `<div class="files-empty">Aucun fichier</div>`; return; }
     box.innerHTML = d.files.map((f) => { const base = `/api/clients/${encodeURIComponent(id)}/files/${encodeURIComponent(f.filename)}`;
-      return `<div class="file"><span class="file-ico">${fileIcon(f.originalname)}</span>
-        <div class="file-body"><div class="file-name" title="${esc(f.originalname)}">${esc(f.originalname)}</div><div class="file-size">${esc(fmtSize(f.size))}</div></div>
-        <div class="file-acts"><a class="icon-btn" href="${esc(base)}" target="_blank" rel="noopener" title="Ouvrir">${ICON.eye}</a><a class="icon-btn" href="${esc(base)}?dl=1" title="Télécharger">${ICON.download}</a>${can("files.edit") ? `<button class="icon-btn" title="Supprimer" onclick="delFile(${attr(id)},${attr(f.filename)})">${ICON.trash}</button>` : ""}</div></div>`;
+      const thumb = canThumb(f.originalname) ? `<img src="${esc(base)}/thumb" alt="" loading="lazy" decoding="async" onload="this.parentNode.classList.add('has-img')" onerror="this.remove()">` : "";
+      return `<div class="file"><a class="file-thumb" href="${esc(base)}" target="_blank" rel="noopener" title="Aperçu : ${esc(f.originalname)}"><span class="file-ico">${fileIcon(f.originalname)}</span>${thumb}<span class="file-ext">${esc(fileExt(f.originalname))}</span></a>
+        <div class="file-row"><div class="file-body"><div class="file-name" title="${esc(f.originalname)}">${esc(f.originalname)}</div><div class="file-size">${esc(fmtSize(f.size))}</div></div>
+        <div class="file-acts"><a class="icon-btn" href="${esc(base)}" target="_blank" rel="noopener" title="Ouvrir">${ICON.eye}</a><a class="icon-btn" href="${esc(base)}?dl=1" title="Télécharger">${ICON.download}</a>${can("files.edit") ? `<button class="icon-btn" title="Supprimer" onclick="delFile(${attr(id)},${attr(f.filename)})">${ICON.trash}</button>` : ""}</div></div></div>`;
     }).join("");
   } catch { box.innerHTML = `<div class="files-empty">Erreur de chargement</div>`; }
 }
