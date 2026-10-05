@@ -47,6 +47,7 @@ const root = document.getElementById("root");
 let me = null, info = { appName: "Gestion Clients", logo: null, logoDark: null };
 let clients = [], selectedId = null, query = "";
 let sortKey = (() => { try { return localStorage.getItem("gc.sort") || "nom"; } catch { return "nom"; } })();
+if (!["nom", "nom-desc", "maj", "ajout"].includes(sortKey)) sortKey = "nom";
 let draft = null;   // brouillon du formulaire { credentials, networks, hosts }
 
 /* ═════════ Utilitaires ═════════ */
@@ -172,13 +173,14 @@ async function loadClients() {
 
 /* ═════════ Application ═════════ */
 function renderApp() {
-  const scope = me.clientScope !== "all" ? `<span class="tag">accès limité</span>` : "";
   root.innerHTML = `
   <div class="app">
     <header class="topbar"><div class="topbar-inner">
       <div class="brand">${brandMark(false)}<div class="brand-title"><strong>Gestion Clients</strong><small>${esc(info.appName)}</small></div></div>
       <div class="topbar-actions">
         <button class="user-chip" onclick="openAccount()" title="Mon compte"><span class="dot">${esc(initials(me.displayName))}</span>${esc(me.displayName)}<span class="role">· ${me.role === "admin" ? "Admin" : "Utilisateur"}</span>${me.twofa ? `<span class="chip-2fa" title="2FA active">${ICON.shield}</span>` : ""}</button>
+        <button class="btn btn-sm has-label nav-clients" id="navClients" onclick="showClients()" title="Tous les clients">${ICON.users}<span class="label">Clients</span></button>
+        <button class="btn btn-sm has-label search-btn" onclick="openSearch()" title="Rechercher un client (/ ou Ctrl+K)">${ICON.search}<span class="label">Rechercher</span><kbd class="label">/</kbd></button>
         ${can("export") ? `<button class="btn btn-sm has-label" onclick="exportAll()" title="Exporter (ZIP)">${ICON.export}<span class="label">Export</span></button>` : ""}
         ${me.role === "admin" ? `<button class="btn btn-sm has-label" onclick="openBackup()" title="Sauvegarde complète chiffrée">${ICON.shield}<span class="label">Sauvegarde</span></button>` : ""}
         ${me.role === "admin" ? `<button class="btn btn-sm has-label" onclick="openUsers()" title="Comptes">${ICON.settings}<span class="label">Comptes</span></button>` : ""}
@@ -186,50 +188,39 @@ function renderApp() {
         <button class="btn btn-icon btn-ghost btn-danger" onclick="doLogout()" title="Déconnexion" aria-label="Déconnexion">${ICON.logout}</button>
       </div>
     </div></header>
-    <div class="layout">
-      <aside class="sidebar">
-        <div class="sidebar-head">
-          <div class="sidebar-top"><span class="sidebar-count"><b id="cCount">${clients.length}</b> client${clients.length > 1 ? "s" : ""} ${scope}</span>
-            ${can("clients.edit") ? `<button class="btn btn-primary btn-sm" onclick="openForm()">${ICON.plus}Nouveau</button>` : ""}</div>
-          <div class="search">${ICON.search}<input type="search" id="search" placeholder="Nom, IP, machine, fichier…  ( / )" aria-label="Rechercher" value="${esc(query)}"></div>
-          <label class="sort">${ICON.sort}<select id="sortSel" aria-label="Trier">${SORTS.filter((o) => !o.perm || can(o.perm)).map((o) => `<option value="${o.k}"${o.k === sortKey ? " selected" : ""}>${o.label}</option>`).join("")}</select></label>
-        </div>
-        <div class="client-list" id="clientList"></div>
-      </aside>
+    <div class="layout layout-full">
       <main class="detail" id="detail"></main>
     </div>
   </div>
   <div class="overlay" id="overlay" onclick="closeForm()"></div>
   <div class="panel" id="panel"></div>
-  <div id="modalHost"></div>`;
-  const s = document.getElementById("search");
-  s.addEventListener("input", () => { query = s.value.trim(); renderList(); });
-  s.addEventListener("keydown", (e) => { if (e.key === "Escape") { s.value = ""; query = ""; renderList(); s.blur(); }
-    if (e.key === "Enter") { const first = document.querySelector("#clientList .client-item"); if (first) first.click(); } });
-  document.getElementById("sortSel").addEventListener("change", (e) => { sortKey = e.target.value; try { localStorage.setItem("gc.sort", sortKey); } catch {} renderList(); });
-  if (!window._slashKey) { window._slashKey = true; document.addEventListener("keydown", (e) => {
-    if (e.key !== "/" || e.ctrlKey || e.metaKey || /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName)) return;
-    const el = document.getElementById("search"); if (el) { e.preventDefault(); el.focus(); el.select(); } }); }
-  renderList(); renderDetail();
+  <div id="modalHost"></div>
+  <div id="searchHost"></div>`;
+  if (!window._searchKeys) { window._searchKeys = true; document.addEventListener("keydown", (e) => {
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName);
+    if (((e.key === "/" && !typing) || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k")) && me && document.getElementById("searchHost")) { e.preventDefault(); openSearch(); } }); }
+  if (!window._hashNav) { window._hashNav = true; window.addEventListener("hashchange", () => { if (me && document.getElementById("detail")) routeFromHash(); }); }
+  routeFromHash(true);
 }
+/* ═════════ Navigation : #/clients  |  #/c/<id> (bouton Précédent du navigateur compatible) ═════════ */
+function routeFromHash(initial) {
+  const m = /^#\/c\/([\w-]+)/.exec(location.hash);
+  const id = m && clients.some((c) => c.id === m[1]) ? m[1] : null;
+  if (id !== selectedId || initial) { selectedId = id; renderDetail(); window.scrollTo({ top: 0 }); }
+}
+function showClients() { if (location.hash !== "#/clients") location.hash = "#/clients"; else routeFromHash(true); }
 
 /* ═════════ Liste : tri, recherche, épingles ═════════ */
 const SORTS = [
   { k: "nom", label: "Nom A → Z" }, { k: "nom-desc", label: "Nom Z → A" },
   { k: "maj", label: "Modifiés récemment" }, { k: "ajout", label: "Ajoutés récemment" },
-  { k: "fichiers", label: "Plus de fichiers", perm: "files.view" }, { k: "acces", label: "Plus d'accès", perm: "secrets.view" },
-  { k: "machines", label: "Plus de machines" },
 ];
 const norm = (v) => String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 const byName = (a, b) => (a.nom || "").localeCompare(b.nom || "", "fr", { sensitivity: "base", numeric: true });
-const nCount = (c) => ({ fichiers: (c.fileNames || []).length, acces: (c.credentials || []).length, machines: (c.hosts || []).length });
 const SORT_FN = {
   nom: byName, "nom-desc": (a, b) => byName(b, a),
   maj: (a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")) || byName(a, b),
   ajout: (a, b) => String(b.createdAt || b.dateAjout || "").localeCompare(String(a.createdAt || a.dateAjout || "")) || byName(a, b),
-  fichiers: (a, b) => nCount(b).fichiers - nCount(a).fichiers || byName(a, b),
-  acces: (a, b) => nCount(b).acces - nCount(a).acces || byName(a, b),
-  machines: (a, b) => nCount(b).machines - nCount(a).machines || byName(a, b),
 };
 const isPinned = (id) => (me.pins || []).includes(id);
 
@@ -253,50 +244,102 @@ function matchClient(c, terms) {
   return { where: hit ? `${hit[0]} : ${hit[1].replace(/\s+/g, " ").slice(0, 80)}` : "" };
 }
 function listView() {
-  const terms = norm(query).split(/\s+/).filter(Boolean);
-  let rows = clients.map((c) => ({ c, m: terms.length ? matchClient(c, terms) : { where: "" } })).filter((r) => r.m);
+  const rows = clients.map((c) => ({ c, m: { where: "" } }));
   const fn = SORT_FN[sortKey] || byName;
   rows.sort((a, b) => fn(a.c, b.c));
   return { pinned: rows.filter((r) => isPinned(r.c.id)), others: rows.filter((r) => !isPinned(r.c.id)), total: rows.length };
 }
 function sortBadge(c) {
-  const n = nCount(c);
-  if (sortKey === "fichiers") return n.fichiers ? `${n.fichiers} fich.` : "";
-  if (sortKey === "acces") return n.acces ? `${n.acces} accès` : "";
-  if (sortKey === "machines") return n.machines ? `${n.machines} mach.` : "";
   if (sortKey === "maj" && c.updatedAt) return new Date(c.updatedAt).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
   if (sortKey === "ajout" && (c.createdAt || c.dateAjout)) return new Date(c.createdAt || c.dateAjout).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "2-digit" });
   return "";
 }
-function itemHTML({ c, m }) {
+function cardHTML(c) {
   const pinned = isPinned(c.id), badge = sortBadge(c);
-  return `<div class="client-item${c.id === selectedId ? " active" : ""}" role="button" tabindex="0" onclick="select(${attr(c.id)})" onkeydown="if(event.key==='Enter')select(${attr(c.id)})">
-      <span class="avatar">${esc(initials(c.nom))}</span>
-      <span class="ci-body"><span class="ci-name">${esc(c.nom)}</span><span class="ci-sub${m.where ? " ci-hit" : ""}">${esc(m.where || c.email || c.telephone || "—")}</span></span>
-      ${badge ? `<span class="ci-badge">${esc(badge)}</span>` : ""}
-      <button class="ci-pin${pinned ? " on" : ""}" title="${pinned ? "Désépingler" : "Épingler en haut de liste"}" aria-label="${pinned ? "Désépingler" : "Épingler"}" onclick="event.stopPropagation();togglePin(${attr(c.id)})">${ICON.pin}</button>
+  const stats = [[(c.hosts || []).length, ICON.server, "équipement(s)"], [(c.credentials || []).length, ICON.key, "accès"], [(c.fileNames || []).length, ICON.folder, "fichier(s)"]]
+    .filter(([n]) => n).map(([n, ic, l]) => `<span class="st" title="${n} ${l}">${ic}${n}</span>`).join("");
+  return `<div class="ccard" role="button" tabindex="0" onclick="select(${attr(c.id)})" onkeydown="if(event.key==='Enter')select(${attr(c.id)})">
+      <div class="ccard-top"><span class="avatar">${esc(initials(c.nom))}</span>
+        <span class="ci-body"><span class="ci-name">${esc(c.nom)}</span><span class="ci-sub">${esc(c.email || "—")}</span></span>
+        <button class="ci-pin${pinned ? " on" : ""}" title="${pinned ? "Désépingler" : "Épingler en haut de liste"}" aria-label="${pinned ? "Désépingler" : "Épingler"}" onclick="event.stopPropagation();togglePin(${attr(c.id)})">${ICON.pin}</button></div>
+      <div class="ccard-foot"><span>${esc(c.telephone || "")}</span><span class="ccard-stats">${stats}${badge ? `<span class="ci-badge">${esc(badge)}</span>` : ""}</span></div>
     </div>`;
 }
-function renderList() {
-  const box = document.getElementById("clientList"); if (!box) return;
-  const { pinned, others, total } = listView();
-  const cnt = document.getElementById("cCount"); if (cnt) cnt.textContent = query ? `${total} / ${clients.length}` : clients.length;
-  if (!total) { box.innerHTML = `<div class="list-empty">${clients.length ? "Aucun résultat" : "Aucun client"}</div>`; return; }
-  box.innerHTML = (pinned.length ? `<div class="list-sep">${ICON.pin} Épinglés</div>${pinned.map(itemHTML).join("")}${others.length ? `<div class="list-sep">Tous les clients</div>` : ""}` : "")
-    + others.map(itemHTML).join("");
+function renderClients() {
+  const el = document.getElementById("detail"); if (!el) return;
+  const { pinned, others } = listView();
+  const scope = me.clientScope !== "all" ? `<span class="tag">accès limité</span>` : "";
+  el.innerHTML = `
+    <div class="card clients-head">
+      <h2>Clients <span class="count">${clients.length}</span> ${scope}</h2>
+      <label class="sort">${ICON.sort}<select id="sortSel" aria-label="Trier">${SORTS.map((o) => `<option value="${o.k}"${o.k === sortKey ? " selected" : ""}>${o.label}</option>`).join("")}</select></label>
+      ${can("clients.edit") ? `<button class="btn btn-primary btn-sm" onclick="openForm()">${ICON.plus}Nouveau</button>` : ""}
+    </div>
+    ${!clients.length ? `<div class="welcome">${ICON.inbox}<h2>Aucun client</h2><div>${can("clients.edit") ? "Créez votre premier client avec « Nouveau »." : "Aucun client ne vous est attribué."}</div></div>` : ""}
+    ${pinned.length ? `<div class="list-sep">${ICON.pin} Épinglés</div><div class="cgrid">${pinned.map((r) => cardHTML(r.c)).join("")}</div>` : ""}
+    ${others.length ? `${pinned.length ? `<div class="list-sep">Tous les clients</div>` : ""}<div class="cgrid">${others.map((r) => cardHTML(r.c)).join("")}</div>` : ""}`;
+  document.getElementById("sortSel").addEventListener("change", (e) => { sortKey = e.target.value; try { localStorage.setItem("gc.sort", sortKey); } catch {} renderClients(); });
 }
+/** Rafraîchit la vue liste si elle est affichée (sans toucher à une fiche ouverte). */
+function renderList() { if (!selectedId) renderClients(); }
+/* ═════════ Palette de recherche (bouton du haut, / ou Ctrl+K) ═════════ */
+let searchSel = 0, searchRows = [];
+function openSearch() {
+  const host = document.getElementById("searchHost"); if (!host) return;
+  if (host.innerHTML) { document.getElementById("qInput")?.focus(); return; }
+  host.innerHTML = `<div class="sp-wrap" onclick="if(event.target===this)closeSearch()">
+    <div class="sp" role="dialog" aria-label="Rechercher un client">
+      <div class="sp-head">${ICON.search}<input id="qInput" type="search" autocomplete="off" spellcheck="false" placeholder="Nom, email, IP, machine, accès, fichier…" value="${esc(query)}"><kbd>Échap</kbd></div>
+      <div class="sp-list" id="spList"></div>
+      <div class="sp-foot"><span><kbd>↑</kbd><kbd>↓</kbd> naviguer</span><span><kbd>Entrée</kbd> ouvrir</span><span id="spCount"></span></div>
+    </div></div>`;
+  const q = document.getElementById("qInput");
+  q.addEventListener("input", () => { query = q.value; searchSel = 0; renderSearch(); });
+  q.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { e.preventDefault(); closeSearch(); }
+    else if (e.key === "ArrowDown") { e.preventDefault(); searchSel = Math.min(searchSel + 1, searchRows.length - 1); renderSearch(true); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); searchSel = Math.max(searchSel - 1, 0); renderSearch(true); }
+    else if (e.key === "Enter") { e.preventDefault(); const r = searchRows[searchSel]; if (r) pickSearch(r.c.id); }
+  });
+  searchSel = 0; renderSearch(); q.focus(); q.select();
+}
+function closeSearch() { const h = document.getElementById("searchHost"); if (h) h.innerHTML = ""; }
+function pickSearch(id) { closeSearch(); select(id); }
+function renderSearch(keepScroll) {
+  const box = document.getElementById("spList"); if (!box) return;
+  const terms = norm(query).split(/\s+/).filter(Boolean); let head = "";
+  if (terms.length) {
+    searchRows = clients.map((c) => ({ c, m: matchClient(c, terms) })).filter((r) => r.m).sort((a, b) => byName(a.c, b.c)).slice(0, 50);
+  } else {   // sans saisie : épinglés puis récemment modifiés
+    const pins = clients.filter((c) => isPinned(c.id)).sort(byName);
+    const rec = clients.filter((c) => !isPinned(c.id)).sort(SORT_FN.maj).slice(0, 8);
+    searchRows = [...pins, ...rec].map((c) => ({ c, m: { where: "" } })); head = "Épinglés et récemment modifiés";
+  }
+  const total = terms.length ? clients.filter((c) => matchClient(c, terms)).length : 0;
+  document.getElementById("spCount").textContent = terms.length ? `${total} résultat${total > 1 ? "s" : ""}${total > 50 ? " (50 affichés)" : ""}` : "";
+  if (!searchRows.length) { box.innerHTML = `<div class="list-empty">${terms.length ? "Aucun résultat" : "Aucun client"}</div>`; return; }
+  box.innerHTML = (head ? `<div class="list-sep">${head}</div>` : "") + searchRows.map(({ c, m }, i) => `
+    <div class="sp-item${i === searchSel ? " sel" : ""}" onmousemove="if(searchSel!==${i}){searchSel=${i};renderSearch(true)}" onclick="pickSearch(${attr(c.id)})">
+      <span class="avatar">${esc(initials(c.nom))}</span>
+      <span class="ci-body"><span class="ci-name">${esc(c.nom)}${isPinned(c.id) ? ` <span class="sp-pin">${ICON.pin}</span>` : ""}</span><span class="ci-sub${m.where ? " ci-hit" : ""}">${esc(m.where || [c.email, c.telephone].filter(Boolean).join(" · ") || "—")}</span></span>
+      ${i === searchSel ? `<kbd>↵</kbd>` : ""}
+    </div>`).join("");
+  if (keepScroll) box.querySelector(".sp-item.sel")?.scrollIntoView({ block: "nearest" });
+}
+
 async function togglePin(id) {
   const on = !isPinned(id);
-  try { const d = await api("PUT", `/api/me/pins/${encodeURIComponent(id)}`, { pinned: on }); me.pins = d.pins; renderList(); if (id === selectedId) renderDetail(); }
+  try { const d = await api("PUT", `/api/me/pins/${encodeURIComponent(id)}`, { pinned: on }); me.pins = d.pins; renderDetail(); }
   catch (e) { toast(e.message, true); }
 }
-function select(id) { selectedId = id; renderList(); renderDetail(); }
+function select(id) { if (location.hash !== `#/c/${id}`) location.hash = `#/c/${id}`; else routeFromHash(true); }
 
 /* ═════════ Détail client ═════════ */
 function renderDetail() {
   const el = document.getElementById("detail");
   const c = clients.find((x) => x.id === selectedId);
-  if (!c) { el.innerHTML = `<div class="welcome">${ICON.inbox}<h2>Aucun client sélectionné</h2><div>Choisissez un client${can("clients.edit") ? " ou créez-en un nouveau" : ""}.</div></div>`; return; }
+  document.getElementById("navClients")?.classList.toggle("active", !c);
+  if (!c) { selectedId = null; return renderClients(); }
   const mailV = c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : "Non renseigné";
   const telV = c.telephone ? `<a href="tel:${esc(c.telephone.replace(/\s/g, ""))}">${esc(c.telephone)}</a>` : "Non renseigné";
 
@@ -327,6 +370,7 @@ function renderDetail() {
   else if (c.notesHidden) notesCard = `<div class="card"><div class="card-head"><span class="kicker">${ICON.note} Notes</span></div><div class="notes-hidden">Notes masquées (accès non autorisé)</div></div>`;
 
   el.innerHTML = `
+    <button class="back-link" onclick="showClients()">${ICON.back} Tous les clients</button>
     <div class="card"><div class="detail-hero">
       <span class="avatar lg">${esc(initials(c.nom))}</span>
       <div class="ident"><h2>${esc(c.nom)}</h2><div class="meta">Ajouté le ${esc(c.dateAjout || "—")}</div></div>
@@ -495,10 +539,10 @@ async function saveClient(id) {
   if (!body.nom) { toast("Le nom est obligatoire", true); return; }
   try {
     let u; if (id) { u = await api("PUT", `/api/clients/${encodeURIComponent(id)}`, body); const k = clients.findIndex((x) => x.id === u.id); if (k >= 0) clients[k] = u; }
-    else { u = await api("POST", "/api/clients", body); clients.push(u); selectedId = u.id; }
+    else { u = await api("POST", "/api/clients", body); clients.push(u); }
     for (const cid in secretsCache) delete secretsCache[cid];
     clients.sort((a, b) => (a.nom || "").localeCompare(b.nom || "", "fr", { sensitivity: "base" }));
-    closeForm(); renderList(); renderDetail(); document.getElementById("cCount").textContent = clients.length;
+    closeForm(); if (id) renderDetail(); else select(u.id);
     toast(id ? "Client enregistré" : "Client créé");
   } catch (e) { toast(e.message, true); }
 }
@@ -515,8 +559,8 @@ function askDelete(id) {
   const c = clients.find((x) => x.id === id); if (!c) return;
   modal(`${ICON.alert} Supprimer le client`, `Supprimer <strong>${esc(c.nom)}</strong>, ses accès et tous ses fichiers ? Irréversible.`,
     [{ label: "Annuler", cls: "btn" }, { label: "Supprimer", cls: "btn btn-danger", act: async () => {
-      try { await api("DELETE", `/api/clients/${encodeURIComponent(id)}`); clients = clients.filter((x) => x.id !== id); if (selectedId === id) selectedId = null;
-        renderList(); renderDetail(); document.getElementById("cCount").textContent = clients.length; toast("Client supprimé"); } catch (e) { toast(e.message, true); } } }]);
+      try { await api("DELETE", `/api/clients/${encodeURIComponent(id)}`); clients = clients.filter((x) => x.id !== id); 
+        if (selectedId === id) showClients(); else renderDetail(); toast("Client supprimé"); } catch (e) { toast(e.message, true); } } }]);
 }
 
 /* ═════════ Exports ═════════ */
