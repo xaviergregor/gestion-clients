@@ -284,7 +284,7 @@ function cardHTML(c) {
   const pinned = isPinned(c.id), badge = sortBadge(c);
   const stats = [[(c.hosts || []).length, ICON.server, "équipement(s)"], [(c.credentials || []).length, ICON.key, "accès"], [(c.fileNames || []).length, ICON.folder, "fichier(s)"]]
     .filter(([n]) => n).map(([n, ic, l]) => `<span class="st" title="${n} ${l}">${ic}${n}</span>`).join("");
-  return `<div class="ccard" role="button" tabindex="0" onclick="select(${attr(c.id)})" onkeydown="if(event.key==='Enter')select(${attr(c.id)})">
+  return `<div class="ccard${pinned ? " pinned" : ""}" role="button" tabindex="0" onclick="select(${attr(c.id)})" onkeydown="if(event.key==='Enter')select(${attr(c.id)})">
       <div class="ccard-top"><span class="avatar">${esc(initials(c.nom))}</span>
         <span class="ci-body"><span class="ci-name">${esc(c.nom)}</span><span class="ci-sub">${esc(c.email || "—")}</span></span>
         <button class="ci-pin${pinned ? " on" : ""}" title="${pinned ? "Désépingler" : "Épingler en haut de liste"}" aria-label="${pinned ? "Désépingler" : "Épingler"}" onclick="event.stopPropagation();togglePin(${attr(c.id)})">${ICON.pin}</button></div>
@@ -302,7 +302,7 @@ function renderClients() {
       ${can("clients.edit") ? `<button class="btn btn-primary btn-sm" onclick="openForm()">${ICON.plus}Nouveau</button>` : ""}
     </div>
     ${!clients.length ? `<div class="welcome">${ICON.inbox}<h2>Aucun client</h2><div>${can("clients.edit") ? "Créez votre premier client avec « Nouveau »." : "Aucun client ne vous est attribué."}</div></div>` : ""}
-    ${pinned.length ? `<div class="list-sep">${ICON.pin} Épinglés</div><div class="cgrid">${pinned.map((r) => cardHTML(r.c)).join("")}</div>` : ""}
+    ${pinned.length ? `<div class="list-sep pin-sep">${ICON.pin} Épinglés <span class="n">${pinned.length}</span></div><div class="cgrid">${pinned.map((r) => cardHTML(r.c)).join("")}</div>` : ""}
     ${others.length ? `${pinned.length ? `<div class="list-sep">Tous les clients</div>` : ""}<div class="cgrid">${others.map((r) => cardHTML(r.c)).join("")}</div>` : ""}`;
   document.getElementById("sortSel").addEventListener("change", (e) => { sortKey = e.target.value; try { localStorage.setItem("gc.sort", sortKey); } catch {} renderClients(); });
 }

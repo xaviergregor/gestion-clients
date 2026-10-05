@@ -101,6 +101,15 @@ textarea { resize: vertical; min-height: 96px; line-height: 1.55; font-family: v
 .ccard-stats { display: inline-flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .ccard-stats .st { display: inline-flex; align-items: center; gap: 4px; color: var(--gray); }
 .ccard-stats .st svg { width: 12px; height: 12px; color: var(--gray-soft); }
+/* Clients épinglés : carte teintée, liseré d'accent, punaise toujours visible */
+.ccard.pinned { position: relative; background: color-mix(in srgb, var(--accent) 7%, var(--bg-card)); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); box-shadow: inset 3px 0 0 var(--accent); }
+.ccard.pinned:hover, .ccard.pinned:focus-visible { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent), var(--shadow-md); }
+.ccard.pinned .avatar { background: var(--accent); color: var(--on-accent); }
+.ccard.pinned .ccard-foot { border-top-color: color-mix(in srgb, var(--accent) 22%, var(--border)); }
+.ccard.pinned .ci-pin { opacity: 1; color: var(--accent); }
+.list-sep.pin-sep { color: var(--accent); font-size: 11px; }
+.list-sep.pin-sep svg { width: 12px; height: 12px; fill: currentColor; }
+.list-sep .n { font: 600 10.5px/1.6 var(--font-mono); letter-spacing: 0; padding: 0 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
 .back-link { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px 4px 4px; margin-bottom: -6px; border: 0; background: none; font: 500 12.5px/1 var(--font-sans); color: var(--gray); cursor: pointer; border-radius: 7px; }
 .back-link svg { width: 14px; height: 14px; }
 .back-link:hover { color: var(--accent); background: var(--accent-soft); }
