@@ -182,7 +182,6 @@ function renderApp() {
         <button class="btn btn-sm has-label search-btn" onclick="openSearch()" title="Rechercher un client (/ ou Ctrl+K)">${ICON.search}<span class="label">Rechercher</span><kbd class="label">/</kbd></button>
       </nav>
       <div class="topbar-actions">
-        ${themeToggle()}
         <div class="umenu" id="umenu">
           <button class="user-chip" onclick="toggleUserMenu()" aria-haspopup="menu" aria-expanded="false" id="umenuBtn" title="Compte et outils"><span class="dot">${esc(initials(me.displayName))}</span>${esc(me.displayName)}<span class="role">· ${me.role === "admin" ? "Admin" : "Utilisateur"}</span>${me.twofa ? `<span class="chip-2fa" title="2FA active">${ICON.shield}</span>` : ""}<span class="caret">▾</span></button>
           <div class="umenu-pop" role="menu">
@@ -192,10 +191,10 @@ function renderApp() {
             ${can("export") ? `<button role="menuitem" onclick="menuGo(exportAll)">${ICON.export}<span>Exporter les clients<small>Archive ZIP de votre périmètre</small></span></button>` : ""}
             ${me.role === "admin" ? `<button role="menuitem" onclick="menuGo(openBackup)">${ICON.shield}<span>Sauvegarde complète<small>Archive chiffrée AES-256</small></span></button>
             <button role="menuitem" onclick="menuGo(openUsers)">${ICON.settings}<span>Comptes utilisateurs<small>Droits et accès par client</small></span></button>` : ""}
-            <div class="umenu-sep"></div>
-            <button role="menuitem" class="danger" onclick="menuGo(doLogout)">${ICON.logout}<span>Déconnexion</span></button>
           </div>
         </div>
+        ${themeToggle()}
+        <button class="btn btn-icon btn-ghost btn-danger" onclick="doLogout()" title="Déconnexion" aria-label="Déconnexion">${ICON.logout}</button>
       </div>
     </div></header>
     <div class="layout layout-full">
@@ -602,9 +601,40 @@ function exportWarn(go) {
 function openAccount() {
   modalHTML(`${ICON.user} Mon compte`, `
     <div class="acct-row"><div><div class="acct-k">Identifiant</div><div class="acct-v">${esc(me.username)}</div></div></div>
+    <div class="acct-row"><div><div class="acct-k">Mot de passe</div><div class="acct-v">••••••••</div></div>
+      <button class="btn btn-sm" onclick="openPasswordChange()">${ICON.key}Changer</button></div>
     <div class="acct-row"><div><div class="acct-k">Double authentification</div><div class="acct-v">${me.twofa ? `<span class="tag ok">${ICON.check} activée</span>` : `<span class="tag">désactivée</span>`}</div></div>
       ${me.twofa ? `<button class="btn btn-sm btn-danger" onclick="disable2fa()">Désactiver</button>` : `<button class="btn btn-sm btn-primary" onclick="render2faEnroll(false)">Activer</button>`}</div>
     <p class="note">La double authentification protège votre compte même si votre mot de passe est compromis. Recommandée, surtout pour les accès depuis Internet.</p>`);
+}
+function openPasswordChange() {
+  modalHTML(`${ICON.key} Changer mon mot de passe`, `
+    <form id="pwForm" autocomplete="on" onsubmit="event.preventDefault();submitPasswordChange()">
+      <input type="text" name="username" value="${esc(me.username)}" autocomplete="username" hidden>
+      <label class="field"><span>Mot de passe actuel</span><input type="password" id="pwCur" autocomplete="current-password" required></label>
+      <label class="field"><span>Nouveau mot de passe</span><input type="password" id="pwNew" autocomplete="new-password" minlength="8" required oninput="pwMeter()"></label>
+      <div class="pw-meter"><span id="pwBar"></span></div><div class="note pw-hint" id="pwHint">8 caractères minimum — une phrase de passe est idéale.</div>
+      <label class="field"><span>Confirmer le nouveau mot de passe</span><input type="password" id="pwNew2" autocomplete="new-password" required></label>
+      <p class="note">Vos autres sessions (autres navigateurs, autres appareils) seront déconnectées.</p>
+      <div class="modal-acts" style="margin-top:16px"><button type="button" class="btn" onclick="openAccount()">Annuler</button><button type="submit" class="btn btn-primary" id="pwSubmit">Enregistrer</button></div>
+    </form>`);
+  setTimeout(() => document.getElementById("pwCur")?.focus(), 30);
+}
+function pwMeter() {
+  const v = document.getElementById("pwNew").value; let sc = 0;
+  if (v.length >= 8) sc++; if (v.length >= 12) sc++; if (v.length >= 16) sc++;
+  if (/[a-z]/.test(v) && /[A-Z]/.test(v)) sc++; if (/\d/.test(v)) sc++; if (/[^\w\s]/.test(v) || /\s/.test(v)) sc++;
+  const lvl = v.length < 8 ? 0 : Math.min(4, Math.ceil(sc / 1.5));
+  const bar = document.getElementById("pwBar"); bar.style.width = `${[6, 30, 55, 80, 100][lvl]}%`; bar.dataset.lvl = lvl;
+  document.getElementById("pwHint").textContent = v.length < 8 ? `${8 - v.length} caractère(s) de plus` : ["", "Faible", "Moyen", "Bon", "Excellent"][lvl];
+}
+async function submitPasswordChange() {
+  const cur = document.getElementById("pwCur").value, n1 = document.getElementById("pwNew").value, n2 = document.getElementById("pwNew2").value;
+  if (n1.length < 8) return toast("Nouveau mot de passe : 8 caractères minimum", true);
+  if (n1 !== n2) return toast("Les deux nouveaux mots de passe ne correspondent pas", true);
+  const btn = document.getElementById("pwSubmit"); btn.disabled = true;
+  try { const d = await api("POST", "/api/me/password", { current: cur, next: n1 }); me = { ...me, ...d.user }; closeModal(); toast("Mot de passe modifié"); }
+  catch (e) { toast(e.message, true); btn.disabled = false; }
 }
 function disable2fa() {
   modal(`${ICON.shield} Désactiver la 2FA`, `Saisissez votre mot de passe pour confirmer :<br><input type="password" id="dis2fapw" class="form-input" style="margin-top:10px" autocomplete="current-password">`,

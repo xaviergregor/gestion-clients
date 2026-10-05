@@ -293,11 +293,28 @@ app.post("/api/2fa/enable", (req, res) => {
   res.json({ ok: true, user: publicUser(uu) });
 });
 app.post("/api/2fa/disable", auth, (req, res) => {
-  if (!passwordOk(req.user.passwordHash, String(req.body?.password || ""))) return res.status(401).json({ error: "Mot de passe incorrect" });
+  if (!passwordOk(req.user.passwordHash, String(req.body?.password || ""))) return res.status(400).json({ error: "Mot de passe incorrect" });
   const data = readUsers(); const uu = data.users.find((x) => x.username === req.user.username);
   delete uu.totp; delete uu.pendingTotp; uu.totpEnabled = false; writeUsers(data);
   log("INFO", `2FA DISABLED user=${JSON.stringify(req.user.username)}`);
   res.json({ ok: true, user: publicUser(uu) });
+});
+
+// ── Changement de son propre mot de passe (déconnecte les autres sessions) ──
+app.post("/api/me/password", auth, (req, res) => {
+  const key = `pw:${req.user.username}`;
+  if (tooMany(key)) return res.status(429).json({ error: "Trop de tentatives, réessayez plus tard" });
+  const cur = String(req.body?.current || ""), next = String(req.body?.next || "");
+  if (!passwordOk(req.user.passwordHash, cur)) { addFail(key); log("WARN", `PASSWORD CHANGE FAIL user=${JSON.stringify(req.user.username)}`); return res.status(400).json({ error: "Mot de passe actuel incorrect" }); }
+  if (next.length < 8) return res.status(400).json({ error: "Nouveau mot de passe : 8 caractères minimum" });
+  if (next.length > 200) return res.status(400).json({ error: "Mot de passe trop long" });
+  if (next === cur) return res.status(400).json({ error: "Le nouveau mot de passe doit être différent de l'actuel" });
+  const data = readUsers(); const u = data.users.find((x) => x.username === req.user.username);
+  u.passwordHash = hashPassword(next); u.pv = crypto.randomBytes(6).toString("hex"); u.passwordChangedAt = new Date().toISOString();
+  writeUsers(data); failures.delete(key);
+  finishLogin(res, u);   // nouvelle session pour cet appareil ; les autres sont invalidées par le changement de pv
+  log("INFO", `PASSWORD CHANGED user=${JSON.stringify(u.username)}`);
+  res.json({ ok: true, user: publicUser(u) });
 });
 
 // ── Branding ──

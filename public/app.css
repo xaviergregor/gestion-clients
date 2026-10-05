@@ -389,3 +389,12 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 .modal-top h2 { margin: 0; }
 .modal-scroll { max-height: 70vh; overflow-y: auto; }
 .modal .form-input { width: 100%; }
+
+/* ---------- Changement de mot de passe ---------- */
+#pwForm .field { margin-bottom: 12px; }
+#pwForm .field input { width: 100%; }
+.pw-hint { margin: 4px 0 12px; }
+.pw-meter { height: 4px; border-radius: 4px; background: var(--bg-secondary); margin-top: -4px; overflow: hidden; }
+.pw-meter span { display: block; height: 100%; width: 0; background: var(--danger); transition: width .2s, background .2s; }
+.pw-meter span[data-lvl="2"] { background: #d99a2b; }
+.pw-meter span[data-lvl="3"], .pw-meter span[data-lvl="4"] { background: var(--ok); }
