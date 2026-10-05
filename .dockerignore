@@ -1,0 +1,10 @@
+.env
+.env.*
+data/
+branding/
+node_modules/
+server/node_modules/
+server/public/
+*.md
+.git/
+.DS_Store
