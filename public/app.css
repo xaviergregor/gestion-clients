@@ -107,6 +107,28 @@ textarea { resize: vertical; min-height: 96px; line-height: 1.55; font-family: v
 .detail > .list-sep { padding: 4px 2px 0; margin-bottom: -6px; }
 @media (max-width: 560px) { .clients-head .sort { width: 100%; order: 3; } .cgrid { grid-template-columns: 1fr; } }
 
+/* ---------- Barre du haut : navigation + menu du compte ---------- */
+.topbar-nav { display: flex; align-items: center; gap: 6px; margin-left: 12px; padding-left: 14px; border-left: 1px solid var(--border); }
+.umenu { position: relative; }
+.user-chip .caret { font-size: 10px; color: var(--gray-soft); margin-left: 2px; transition: transform .15s; }
+.umenu.open .user-chip { background: var(--bg-secondary); }
+.umenu.open .caret { transform: rotate(180deg); }
+.umenu-pop { position: absolute; right: 0; top: calc(100% + 8px); z-index: 60; width: 280px; padding: 6px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-md);
+  opacity: 0; transform: translateY(-4px); pointer-events: none; visibility: hidden; transition: opacity .12s, transform .12s, visibility .12s; }
+.umenu.open .umenu-pop { opacity: 1; transform: none; pointer-events: auto; visibility: visible; }
+.umenu-who { display: flex; flex-direction: column; padding: 8px 10px 10px; }
+.umenu-who strong { font-size: 13.5px; color: var(--white-bright); }
+.umenu-who span { font: 400 11.5px/1.5 var(--font-mono); color: var(--gray-soft); }
+.umenu-pop button { display: flex; align-items: flex-start; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: var(--radius-sm); background: none; text-align: left; font: 500 13px/1.35 var(--font-sans); color: var(--white-bright); cursor: pointer; }
+.umenu-pop button svg { width: 15px; height: 15px; margin-top: 1px; flex-shrink: 0; color: var(--gray); }
+.umenu-pop button span { display: flex; flex-direction: column; min-width: 0; }
+.umenu-pop button small { font-size: 11.5px; font-weight: 400; color: var(--gray-soft); }
+.umenu-pop button:hover, .umenu-pop button:focus-visible { background: var(--bg-secondary); outline: none; }
+.umenu-pop button:hover svg { color: var(--accent); }
+.umenu-pop button.danger:hover, .umenu-pop button.danger:hover svg { color: var(--danger); }
+.umenu-sep { height: 1px; margin: 6px 4px; background: var(--border); }
+@media (max-width: 560px) { .topbar-nav { margin-left: 0; padding-left: 0; border-left: 0; } .user-chip .caret { display: none; } .umenu-pop { width: min(280px, calc(100vw - 28px)); } }
+
 /* ---------- Recherche (bouton + palette) ---------- */
 .search-btn { color: var(--gray); min-width: 150px; justify-content: flex-start; }
 .search-btn:hover { color: var(--white-bright); }

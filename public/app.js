@@ -177,15 +177,25 @@ function renderApp() {
   <div class="app">
     <header class="topbar"><div class="topbar-inner">
       <div class="brand">${brandMark(false)}<div class="brand-title"><strong>Gestion Clients</strong><small>${esc(info.appName)}</small></div></div>
-      <div class="topbar-actions">
-        <button class="user-chip" onclick="openAccount()" title="Mon compte"><span class="dot">${esc(initials(me.displayName))}</span>${esc(me.displayName)}<span class="role">· ${me.role === "admin" ? "Admin" : "Utilisateur"}</span>${me.twofa ? `<span class="chip-2fa" title="2FA active">${ICON.shield}</span>` : ""}</button>
+      <nav class="topbar-nav">
         <button class="btn btn-sm has-label nav-clients" id="navClients" onclick="showClients()" title="Tous les clients">${ICON.users}<span class="label">Clients</span></button>
         <button class="btn btn-sm has-label search-btn" onclick="openSearch()" title="Rechercher un client (/ ou Ctrl+K)">${ICON.search}<span class="label">Rechercher</span><kbd class="label">/</kbd></button>
-        ${can("export") ? `<button class="btn btn-sm has-label" onclick="exportAll()" title="Exporter (ZIP)">${ICON.export}<span class="label">Export</span></button>` : ""}
-        ${me.role === "admin" ? `<button class="btn btn-sm has-label" onclick="openBackup()" title="Sauvegarde complète chiffrée">${ICON.shield}<span class="label">Sauvegarde</span></button>` : ""}
-        ${me.role === "admin" ? `<button class="btn btn-sm has-label" onclick="openUsers()" title="Comptes">${ICON.settings}<span class="label">Comptes</span></button>` : ""}
+      </nav>
+      <div class="topbar-actions">
         ${themeToggle()}
-        <button class="btn btn-icon btn-ghost btn-danger" onclick="doLogout()" title="Déconnexion" aria-label="Déconnexion">${ICON.logout}</button>
+        <div class="umenu" id="umenu">
+          <button class="user-chip" onclick="toggleUserMenu()" aria-haspopup="menu" aria-expanded="false" id="umenuBtn" title="Compte et outils"><span class="dot">${esc(initials(me.displayName))}</span>${esc(me.displayName)}<span class="role">· ${me.role === "admin" ? "Admin" : "Utilisateur"}</span>${me.twofa ? `<span class="chip-2fa" title="2FA active">${ICON.shield}</span>` : ""}<span class="caret">▾</span></button>
+          <div class="umenu-pop" role="menu">
+            <div class="umenu-who"><strong>${esc(me.displayName)}</strong><span>${esc(me.username)} · ${me.role === "admin" ? "Administrateur" : "Utilisateur"}</span></div>
+            <button role="menuitem" onclick="menuGo(openAccount)">${ICON.user}<span>Mon compte<small>Mot de passe, double authentification</small></span></button>
+            ${can("export") || me.role === "admin" ? `<div class="umenu-sep"></div>` : ""}
+            ${can("export") ? `<button role="menuitem" onclick="menuGo(exportAll)">${ICON.export}<span>Exporter les clients<small>Archive ZIP de votre périmètre</small></span></button>` : ""}
+            ${me.role === "admin" ? `<button role="menuitem" onclick="menuGo(openBackup)">${ICON.shield}<span>Sauvegarde complète<small>Archive chiffrée AES-256</small></span></button>
+            <button role="menuitem" onclick="menuGo(openUsers)">${ICON.settings}<span>Comptes utilisateurs<small>Droits et accès par client</small></span></button>` : ""}
+            <div class="umenu-sep"></div>
+            <button role="menuitem" class="danger" onclick="menuGo(doLogout)">${ICON.logout}<span>Déconnexion</span></button>
+          </div>
+        </div>
       </div>
     </div></header>
     <div class="layout layout-full">
@@ -202,6 +212,23 @@ function renderApp() {
   if (!window._hashNav) { window._hashNav = true; window.addEventListener("hashchange", () => { if (me && document.getElementById("detail")) routeFromHash(); }); }
   routeFromHash(true);
 }
+/* ═════════ Menu du compte ═════════ */
+function toggleUserMenu(force) {
+  const m = document.getElementById("umenu"); if (!m) return;
+  const open = force ?? !m.classList.contains("open");
+  m.classList.toggle("open", open); document.getElementById("umenuBtn")?.setAttribute("aria-expanded", open);
+  if (open) m.querySelector(".umenu-pop button")?.focus({ preventScroll: true });
+}
+function menuGo(fn) { toggleUserMenu(false); fn(); }
+document.addEventListener("click", (e) => { const m = document.getElementById("umenu"); if (m?.classList.contains("open") && !m.contains(e.target)) toggleUserMenu(false); });
+document.addEventListener("keydown", (e) => {
+  const m = document.getElementById("umenu"); if (!m?.classList.contains("open")) return;
+  if (e.key === "Escape") { toggleUserMenu(false); document.getElementById("umenuBtn")?.focus(); }
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault();
+    const items = [...m.querySelectorAll(".umenu-pop button")]; const i = items.indexOf(document.activeElement);
+    items[(i + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length]?.focus(); }
+});
+
 /* ═════════ Navigation : #/clients  |  #/c/<id> (bouton Précédent du navigateur compatible) ═════════ */
 function routeFromHash(initial) {
   const m = /^#\/c\/([\w-]+)/.exec(location.hash);
